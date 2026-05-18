@@ -22,7 +22,6 @@ export default function SelectTeam() {
 
   useEffect(() => {
     async function init() {
-      // Check auth
       const {
         data: { user }
       } = await supabase.auth.getUser()
@@ -31,7 +30,6 @@ export default function SelectTeam() {
         return
       }
 
-      // Check if already picked a team
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('favourite_team_id')
@@ -43,7 +41,6 @@ export default function SelectTeam() {
         return
       }
 
-      // Fetch teams
       const res = await fetch('/api/teams')
       const data = await res.json()
       setTeams(data.teams || [])
@@ -73,37 +70,49 @@ export default function SelectTeam() {
 
   if (loading)
     return (
-      <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading teams...</p>
+      <main className="min-h-screen bg-[#06090f] text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Loading teams...</p>
+        </div>
       </main>
     )
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-8">
+    <main className="min-h-screen bg-[#06090f] text-white p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Pick Your Team</h1>
-        <p className="text-gray-400 mb-8">
-          Choose the team you'll be supporting at FIFA World Cup 2026
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+        <div className="mb-10">
+          <p className="text-green-400/60 text-xs font-semibold uppercase tracking-widest mb-2">
+            FIFA World Cup 2026
+          </p>
+          <h1 className="text-4xl font-black">Pick Your Team</h1>
+          <p className="text-gray-500 mt-2">
+            Choose the team you'll be supporting at FIFA World Cup 2026
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {teams.map((team) => (
             <button
               key={team.id}
               onClick={() => pickTeam(team)}
               disabled={saving}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition
-                ${
-                  selected === team.id
-                    ? 'border-green-500 bg-green-950'
-                    : 'border-gray-700 bg-gray-900 hover:border-gray-500'
-                }`}
+              className={`group flex flex-col items-center gap-2.5 p-4 rounded-xl border transition-all duration-200 ${
+                selected === team.id
+                  ? 'border-yellow-500/70 bg-yellow-950/30 shadow-lg shadow-yellow-950/40'
+                  : 'border-gray-800 bg-gray-900/50 hover:border-gray-600 hover:bg-gray-800/60 hover:shadow-lg hover:shadow-black/30'
+              } disabled:opacity-60`}
             >
               <img
                 src={team.crest}
                 alt={team.name}
-                className="w-12 h-12 object-contain"
+                className="w-12 h-12 object-contain transition-transform duration-200 group-hover:scale-110"
               />
-              <span className="text-xs text-center text-gray-300">
+              <span
+                className={`text-xs text-center font-medium leading-tight transition-colors ${
+                  selected === team.id ? 'text-yellow-400' : 'text-gray-400 group-hover:text-gray-200'
+                }`}
+              >
                 {team.shortName}
               </span>
             </button>
