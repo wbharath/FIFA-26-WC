@@ -1,18 +1,20 @@
 'use client'
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const navLinks = [
   { href: '/dashboard', label: 'My Team' },
   { href: '/fixtures', label: 'Fixtures' },
   { href: '/bracket', label: 'Bracket' },
   { href: '/squad', label: 'Squad' },
+  { href: '/predictions', label: 'Predictions' },
+  { href: '/community', label: 'Community' }
 ]
 
 export default function Navbar() {
   const pathname = usePathname()
-  if (pathname === "/") return null
+  if (pathname === '/') return null
 
   return (
     <nav className="sticky top-0 z-50 bg-gray-950/95 backdrop-blur-md">
