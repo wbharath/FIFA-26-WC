@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Trophy } from 'lucide-react'
+import { useMatchStore } from '@/lib/stores/matchStore'
 
 interface Prediction {
   fixture_id: number
@@ -20,33 +21,129 @@ interface Prediction {
   away_win_prob: number
 }
 
+function PredictionsSkeleton() {
+  return (
+    <main className="min-h-screen bg-wc-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <div className="h-3 w-28 bg-wc-surface rounded animate-pulse mb-2" />
+          <div className="h-9 w-48 bg-wc-surface rounded animate-pulse mb-2" />
+          <div className="h-3 w-80 bg-wc-surface rounded animate-pulse" />
+        </div>
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="mb-6">
+            <div className="h-8 bg-wc-surface animate-pulse mb-0" />
+            {[...Array(4)].map((_, j) => (
+              <div key={j} className="flex items-center px-4 h-13 border-b border-wc-border gap-4">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-5 h-5 bg-wc-surface rounded animate-pulse shrink-0" />
+                  <div className="h-3 w-24 bg-wc-surface rounded animate-pulse" />
+                </div>
+                <div className="w-48 h-3 bg-wc-surface rounded animate-pulse shrink-0" />
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  <div className="h-3 w-24 bg-wc-surface rounded animate-pulse" />
+                  <div className="w-5 h-5 bg-wc-surface rounded animate-pulse shrink-0" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </main>
+  )
+}
+
+function MatchRow({
+  match,
+  logoMap,
+}: {
+  match: Prediction
+  logoMap: Record<number, string>
+}) {
+  const homeLogo = logoMap[match.home_team_id]
+  const awayLogo = logoMap[match.away_team_id]
+  const homeWinPct = Math.round(match.home_win_prob * 100)
+  const drawPct = Math.round(match.draw_prob * 100)
+  const awayWinPct = Math.round(match.away_win_prob * 100)
+  const homeWins = match.predicted_winner === match.home
+  const awayWins = match.predicted_winner === match.away
+
+  return (
+    <div className="flex items-center px-4 h-13 border-b border-wc-border hover:bg-wc-surface-2 transition-colors">
+      {/* Home */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {homeLogo && (
+          <img src={homeLogo} className="w-5 h-5 object-contain shrink-0" loading="lazy" />
+        )}
+        <span
+          className={`text-sm truncate ${
+            homeWins ? 'text-white font-semibold' : 'text-wc-dimmed'
+          }`}
+        >
+          {match.home}
+        </span>
+        {homeWins && (
+          <Trophy className="w-3.5 h-3.5 text-wc-gold shrink-0" />
+        )}
+      </div>
+
+      {/* Probability bar */}
+      <div className="flex items-center gap-2 w-52 shrink-0 mx-3">
+        <span className="text-xs font-bold text-wc-red w-8 text-right shrink-0">
+          {homeWinPct}%
+        </span>
+        <div className="flex flex-1 h-1.5 overflow-hidden">
+          <div className="bg-wc-red h-full" style={{ width: `${homeWinPct}%` }} />
+          <div className="bg-wc-border h-full" style={{ width: `${drawPct}%` }} />
+          <div className="bg-wc-blue h-full" style={{ width: `${awayWinPct}%` }} />
+        </div>
+        <span className="text-xs font-bold text-wc-blue w-8 shrink-0">
+          {awayWinPct}%
+        </span>
+      </div>
+
+      {/* Away */}
+      <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        {awayWins && (
+          <Trophy className="w-3.5 h-3.5 text-wc-gold shrink-0" />
+        )}
+        <span
+          className={`text-sm truncate ${
+            awayWins ? 'text-white font-semibold' : 'text-wc-dimmed'
+          }`}
+        >
+          {match.away}
+        </span>
+        {awayLogo && (
+          <img src={awayLogo} className="w-5 h-5 object-contain shrink-0" loading="lazy" />
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Predictions() {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [logoMap, setLogoMap] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
+  const { fixtures, loaded, load } = useMatchStore()
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
     async function init() {
       const {
-        data: { user }
+        data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
         return
       }
 
-      const [predRes, matchRes] = await Promise.all([
-        fetch('/api/predictions'),
-        fetch('/api/matches')
-      ])
+      const [predRes] = await Promise.all([fetch('/api/predictions'), load()])
       const predData: Prediction[] = await predRes.json()
-      const matchData = await matchRes.json()
 
-      // Build team id → logo map from fixtures
       const map: Record<number, string> = {}
-      const fixtures = matchData.fixtures || []
       fixtures.forEach((f: any) => {
         map[f.teams.home.id] = f.teams.home.logo
         map[f.teams.away.id] = f.teams.away.logo
@@ -58,9 +155,17 @@ export default function Predictions() {
     init()
   }, [])
 
-  // Group stage only for now — knockout unlocks after June 11
-  const groupStage = predictions.filter((p) => p.stage?.includes('Group Stage'))
+  useEffect(() => {
+    if (!loaded) return
+    const map: Record<number, string> = {}
+    fixtures.forEach((f: any) => {
+      map[f.teams.home.id] = f.teams.home.logo
+      map[f.teams.away.id] = f.teams.away.logo
+    })
+    setLogoMap(map)
+  }, [loaded, fixtures])
 
+  const groupStage = predictions.filter((p) => p.stage?.includes('Group Stage'))
   const byGroup = groupStage.reduce(
     (acc, match) => {
       const group = match.group || 'Unknown'
@@ -71,134 +176,49 @@ export default function Predictions() {
     {} as Record<string, Prediction[]>
   )
 
-  function MatchCard({ match }: { match: Prediction }) {
-    const homeLogo = logoMap[match.home_team_id]
-    const awayLogo = logoMap[match.away_team_id]
-    const homeWinPct = Math.round(match.home_win_prob * 100)
-    const drawPct = Math.round(match.draw_prob * 100)
-    const awayWinPct = Math.round(match.away_win_prob * 100)
-
-    return (
-      <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-5">
-        <div className="flex items-center gap-4">
-          {/* Home */}
-          <div
-            className={`flex items-center gap-3 flex-1 justify-end ${
-              match.predicted_winner === match.home
-                ? 'text-white'
-                : 'text-gray-500'
-            }`}
-          >
-            {match.predicted_winner === match.home && (
-              <Trophy className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-            )}
-            <span className="font-bold text-sm text-right">{match.home}</span>
-            {homeLogo && (
-              <img
-                src={homeLogo}
-                className="w-9 h-9 object-contain flex-shrink-0"
-              />
-            )}
-          </div>
-
-          {/* Probability bar */}
-          <div className="flex flex-col items-center gap-2 w-44 flex-shrink-0">
-            <div className="flex w-full h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-green-500 transition-all"
-                style={{ width: `${homeWinPct}%` }}
-              />
-              <div
-                className="bg-gray-600 transition-all"
-                style={{ width: `${drawPct}%` }}
-              />
-              <div
-                className="bg-blue-500 transition-all"
-                style={{ width: `${awayWinPct}%` }}
-              />
-            </div>
-            <div className="flex justify-between w-full text-xs">
-              <span className="text-green-400">{homeWinPct}%</span>
-              <span className="text-gray-500">{drawPct}% draw</span>
-              <span className="text-blue-400">{awayWinPct}%</span>
-            </div>
-          </div>
-
-          {/* Away */}
-          <div
-            className={`flex items-center gap-3 flex-1 ${
-              match.predicted_winner === match.away
-                ? 'text-white'
-                : 'text-gray-500'
-            }`}
-          >
-            {awayLogo && (
-              <img
-                src={awayLogo}
-                className="w-9 h-9 object-contain flex-shrink-0"
-              />
-            )}
-            <span className="font-bold text-sm">{match.away}</span>
-            {match.predicted_winner === match.away && (
-              <Trophy className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading)
-    return (
-      <main className="min-h-screen bg-[#06090f] text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-      </main>
-    )
+  if (loading) return <PredictionsSkeleton />
 
   return (
-    <main className="min-h-screen bg-[#06090f] text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-10">
-          <p className="text-green-400/60 text-xs font-semibold uppercase tracking-widest mb-2">
+    <main className="min-h-screen bg-wc-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <p className="text-wc-dimmed text-xs font-semibold uppercase tracking-widest mb-2">
             Machine Learning
           </p>
-          <h1 className="text-4xl font-black mb-2">AI Predictions</h1>
-          <p className="text-gray-400 text-sm">
-            Logistic regression model trained on 852 World Cup matches
-            (1930–2022) · 14 features including FIFA rankings, H2H records,
-            confederation strength
+          <h1 className="font-bebas text-5xl uppercase mb-2">AI Predictions</h1>
+          <p className="text-wc-muted text-sm">
+            Logistic regression model trained on 852 World Cup matches (1930–2022) · 14
+            features including FIFA rankings, H2H records, confederation strength
           </p>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <span className="w-1 h-7 bg-gradient-to-b from-green-500 to-yellow-500 rounded-full" />
-          <h2 className="text-2xl font-bold">Group Stage</h2>
-        </div>
+        <h2 className="font-bebas text-2xl uppercase mb-4 text-wc-muted tracking-wide">
+          Group Stage
+        </h2>
 
         {Object.entries(byGroup)
           .sort()
           .map(([group, groupMatches]) => (
-            <div key={group} className="mb-8">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 pb-2 border-b border-gray-800">
-                {group}
-              </h3>
-              <div className="flex flex-col gap-3">
+            <div key={group} className="mb-6">
+              <div className="px-4 py-2 bg-wc-surface border-b border-wc-border">
+                <span className="text-[11px] font-semibold text-wc-dimmed uppercase tracking-widest">
+                  {group}
+                </span>
+              </div>
+              <div>
                 {groupMatches.map((match) => (
-                  <MatchCard key={match.fixture_id} match={match} />
+                  <MatchRow key={match.fixture_id} match={match} logoMap={logoMap} />
                 ))}
               </div>
             </div>
           ))}
 
-        {/* Knockout placeholder */}
-        <div className="flex items-center gap-3 mb-4 mt-10">
-          <span className="w-1 h-7 bg-gradient-to-b from-yellow-500 to-amber-600 rounded-full" />
-          <h2 className="text-2xl font-bold">Knockout Stage</h2>
-        </div>
-        <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-500 text-sm">
-            Knockout predictions will be generated after the group stage
-            concludes on June 28
+        <h2 className="font-bebas text-2xl uppercase mb-4 mt-10 text-wc-muted tracking-wide">
+          Knockout Stage
+        </h2>
+        <div className="border border-wc-border bg-wc-surface px-6 py-8 text-center">
+          <p className="text-wc-muted text-sm">
+            Knockout predictions will be generated after the group stage concludes on June 28
           </p>
         </div>
       </div>

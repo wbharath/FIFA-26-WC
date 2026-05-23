@@ -13,6 +13,28 @@ interface Team {
   }
 }
 
+function SelectTeamSkeleton() {
+  return (
+    <main className="min-h-screen bg-wc-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-10">
+          <div className="h-3 w-36 bg-wc-surface rounded animate-pulse mb-2" />
+          <div className="h-10 w-48 bg-wc-surface rounded animate-pulse mb-2" />
+          <div className="h-3 w-72 bg-wc-surface rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {[...Array(24)].map((_, i) => (
+            <div
+              key={i}
+              className="h-28 bg-wc-surface border border-wc-border rounded-xl animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
 export default function SelectTeam() {
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +46,7 @@ export default function SelectTeam() {
   useEffect(() => {
     async function init() {
       const {
-        data: { user }
+        data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -54,7 +76,7 @@ export default function SelectTeam() {
     setSelected(team.team.id)
     setSaving(true)
     const {
-      data: { user }
+      data: { user },
     } = await supabase.auth.getUser()
     if (!user) return
 
@@ -63,32 +85,24 @@ export default function SelectTeam() {
       email: user.email,
       favourite_team_id: team.team.id,
       favourite_team_name: team.team.name,
-      favourite_team_crest: team.team.logo
+      favourite_team_crest: team.team.logo,
     })
 
     router.push('/dashboard')
   }
 
-  if (loading)
-    return (
-      <main className="min-h-screen bg-[#06090f] text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Loading teams...</p>
-        </div>
-      </main>
-    )
+  if (loading) return <SelectTeamSkeleton />
 
   return (
-    <main className="min-h-screen bg-[#06090f] text-white p-8">
-      <div className="max-w-6xl mx-auto">
+    <main className="min-h-screen bg-wc-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-10">
-          <p className="text-green-400/60 text-xs font-semibold uppercase tracking-widest mb-2">
+          <p className="text-wc-muted text-xs font-semibold uppercase tracking-widest mb-2">
             FIFA World Cup 2026
           </p>
-          <h1 className="text-4xl font-black">Pick Your Team</h1>
-          <p className="text-gray-500 mt-2">
-            Choose the team you'll be supporting at FIFA World Cup 2026
+          <h1 className="font-bebas text-5xl uppercase">Pick Your Team</h1>
+          <p className="text-wc-muted mt-2">
+            Choose the team you&apos;ll be supporting at FIFA World Cup 2026
           </p>
         </div>
 
@@ -100,22 +114,21 @@ export default function SelectTeam() {
                 key={t.team.id}
                 onClick={() => pickTeam(t)}
                 disabled={saving}
-                className={`group flex flex-col items-center gap-2.5 p-4 rounded-xl border transition-all duration-200 ${
+                className={`group flex flex-col items-center gap-2.5 p-4 rounded-xl border transition-all duration-150 ${
                   selected === t.team.id
-                    ? 'border-yellow-500/70 bg-yellow-950/30 shadow-lg shadow-yellow-950/40'
-                    : 'border-gray-800 bg-gray-900/50 hover:border-gray-600 hover:bg-gray-800/60 hover:shadow-lg hover:shadow-black/30'
+                    ? 'border-wc-red bg-wc-red/10'
+                    : 'border-wc-border bg-wc-surface hover:-translate-y-1 hover:border-wc-red'
                 } disabled:opacity-60`}
               >
                 <img
                   src={t.team.logo}
                   alt={t.team.name}
-                  className="w-12 h-12 object-contain transition-transform duration-200 group-hover:scale-110"
+                  className="w-12 h-12 object-contain transition-transform duration-150 group-hover:scale-110"
+                  loading="lazy"
                 />
                 <span
-                  className={`text-xs text-center font-medium leading-tight transition-colors ${
-                    selected === t.team.id
-                      ? 'text-yellow-400'
-                      : 'text-gray-400 group-hover:text-gray-200'
+                  className={`font-bebas text-sm text-center leading-tight ${
+                    selected === t.team.id ? 'text-wc-red' : 'text-wc-muted group-hover:text-white'
                   }`}
                 >
                   {t.team.name}

@@ -17,36 +17,47 @@ export default function Navbar() {
   if (pathname === '/') return null
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-950/95 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-8 py-3 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <img
-            src="https://crests.football-data.org/wm26.png"
-            alt="FIFA WC 2026"
-            className="w-9 h-9 object-contain transition-transform group-hover:scale-110"
-          />
-          <span className="font-black text-white text-lg tracking-tight">
-            WC <span className="text-yellow-500">2026</span>
-          </span>
-        </Link>
+    <>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-wc-black border-b border-wc-border">
+        <div className="max-w-7xl mx-auto px-6 h-16 grid grid-cols-3 items-center">
+          {/* Logo — left */}
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 whitespace-nowrap"
+          >
+            <img
+              src="https://crests.football-data.org/wm26.png"
+              alt="FIFA WC 2026"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-bebas text-xl tracking-wide text-white">
+              WC <span className="text-wc-red">2026</span>
+            </span>
+          </Link>
 
-        <div className="flex items-center gap-1">
-          {navLinks.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                pathname === href
-                  ? 'bg-green-700 text-white shadow-lg shadow-green-950/60'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
+          {/* Links — center */}
+          <div className="flex items-center justify-center gap-0.5">
+            {navLinks.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`px-2 py-1 text-sm font-medium whitespace-nowrap transition-all duration-150 ${
+                  pathname === href
+                    ? 'text-white border-b-2 border-wc-red'
+                    : 'text-wc-muted hover:text-white'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Right col — intentionally empty for balance */}
+          <div />
         </div>
-      </div>
-      <div className="h-px bg-gradient-to-r from-transparent via-green-600/50 to-transparent" />
-    </nav>
+      </nav>
+      {/* Offset for fixed navbar */}
+      <div className="h-16 shrink-0" />
+    </>
   )
 }

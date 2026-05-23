@@ -1,34 +1,35 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Bebas_Neue, Inter } from 'next/font/google'
 import './globals.css'
 import Navbar from './components/Navbar'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin']
+const bebasNeue = Bebas_Neue({
+  weight: '400',
+  variable: '--bebas',
+  subsets: ['latin'],
 })
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin']
+const inter = Inter({
+  variable: '--inter',
+  subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
   title: 'FIFA WC 2026',
-  description: 'Your Fantasy Football app'
+  description: 'Your Fantasy Football app',
 }
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bebasNeue.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-wc-black text-white">
         <Navbar />
         {children}
       </body>

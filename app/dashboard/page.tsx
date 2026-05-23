@@ -5,6 +5,37 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+function DashboardSkeleton() {
+  return (
+    <main className="min-h-screen bg-wc-black text-white">
+      <div className="border-b border-wc-border bg-wc-surface">
+        <div className="max-w-7xl mx-auto px-6 py-10">
+          <div className="flex items-center justify-between mb-8">
+            <div className="h-3 w-36 bg-wc-border rounded animate-pulse" />
+            <div className="h-8 w-24 bg-wc-border rounded animate-pulse" />
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="w-24 h-24 rounded-full bg-wc-border animate-pulse shrink-0" />
+            <div className="flex-1">
+              <div className="h-3 w-24 bg-wc-border rounded animate-pulse mb-3" />
+              <div className="h-12 w-64 bg-wc-border rounded animate-pulse mb-3" />
+              <div className="h-3 w-32 bg-wc-border rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="h-7 w-52 bg-wc-surface rounded animate-pulse mb-6" />
+        <div className="flex flex-col gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-18 bg-wc-surface rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
 export default function Dashboard() {
   const supabase = createClient()
   const router = useRouter()
@@ -15,7 +46,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function checkUser() {
       const {
-        data: { user }
+        data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -53,33 +84,22 @@ export default function Dashboard() {
     setMatches(teamMatches)
   }
 
-  if (!user || !profile) return null
+  if (!user || !profile) return <DashboardSkeleton />
 
   return (
-    <main className="min-h-screen bg-[#06090f] text-white">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-green-950/20 to-gray-950 border-b border-green-900/20">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(22,163,74,0.15),transparent_60%)]" />
-        <div className="absolute top-4 right-8 opacity-[0.06] pointer-events-none">
-          <img
-            src="https://crests.football-data.org/wm26.png"
-            alt=""
-            className="w-64 h-64 object-contain"
-          />
-        </div>
-
-        <div className="relative max-w-4xl mx-auto px-8 py-10">
-          <div className="flex items-center justify-between mb-10">
-            <p className="text-green-400/60 text-xs font-semibold uppercase tracking-widest">
+    <main className="min-h-screen bg-wc-black text-white">
+      {/* Hero */}
+      <div className="border-b border-wc-border bg-wc-surface">
+        <div className="max-w-7xl mx-auto px-6 py-10">
+          <div className="flex items-center justify-between mb-8">
+            <p className="text-wc-muted text-xs font-semibold uppercase tracking-widest">
               FIFA World Cup 2026
             </p>
             <div className="flex items-center gap-3">
-              <span className="text-gray-500 text-sm hidden sm:block">
-                {user.email}
-              </span>
+              <span className="text-wc-muted text-sm hidden sm:block">{user.email}</span>
               <button
                 onClick={signOut}
-                className="bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white px-5 py-2 rounded-full text-sm font-medium border border-gray-700 hover:border-gray-600 transition-all duration-200"
+                className="border border-wc-border text-wc-muted hover:text-white hover:border-white px-4 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition-all duration-150"
               >
                 Sign out
               </button>
@@ -87,86 +107,90 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-8">
-            <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 blur-2xl bg-green-500/25 rounded-full scale-[1.8]" />
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 blur-2xl bg-wc-red/20 rounded-full scale-[1.8]" />
               <img
                 src={profile.favourite_team_crest}
                 alt={profile.favourite_team_name}
-                className="relative w-28 h-28 object-contain drop-shadow-2xl"
+                className="relative w-24 h-24 object-contain drop-shadow-2xl"
+                loading="lazy"
               />
             </div>
             <div>
-              <p className="text-yellow-500/70 text-xs font-semibold uppercase tracking-[0.25em] mb-2">
+              <p className="text-wc-muted text-xs font-semibold uppercase tracking-[0.25em] mb-2">
                 Supporting
               </p>
-              <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">
+              <h1 className="font-bebas text-5xl sm:text-6xl uppercase leading-tight">
                 {profile.favourite_team_name}
               </h1>
               <div className="mt-3 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-green-400/70 text-sm">
-                  World Cup 2026 Fan
-                </span>
+                <span className="w-2 h-2 bg-wc-neon rounded-full live-dot" />
+                <span className="text-wc-muted text-sm">World Cup 2026 Fan</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Fixtures Section */}
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
-          <span className="w-1 h-6 bg-gradient-to-b from-green-500 to-yellow-500 rounded-full inline-block" />
-          Your Team's Fixtures
-        </h2>
+      {/* Fixtures */}
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <h2 className="font-bebas text-3xl uppercase mb-6">Your Team&apos;s Fixtures</h2>
 
         <div className="flex flex-col gap-3">
-          {matches.map((match) => (
-            <Link href={`/match/${match.fixture.id}`} key={match.fixture.id}>
-              <div className="group bg-gray-900/50 hover:bg-gray-800/60 border border-gray-800 hover:border-gray-700 rounded-xl p-4 flex items-center justify-between transition-all duration-200">
-                <div className="flex items-center gap-3 w-2/5 justify-end">
-                  <span className="font-semibold text-right text-sm">
-                    {match.teams.home.name}
-                  </span>
-                  <img
-                    src={match.teams.home.logo}
-                    className="w-8 h-8 object-contain"
-                  />
+          {matches.map((match) => {
+            const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(
+              match.fixture.status.short
+            )
+            const isFinished = match.fixture.status.short === 'FT'
+
+            return (
+              <Link href={`/match/${match.fixture.id}`} key={match.fixture.id}>
+                <div className="group bg-wc-surface border-b border-wc-border hover:bg-wc-surface-2 transition-colors">
+                  <div className="flex items-center justify-between px-4 h-13">
+                    <div className="flex items-center gap-3 w-2/5 justify-end">
+                      <span className="font-bebas text-base text-right">
+                        {match.teams.home.name}
+                      </span>
+                      <img
+                        src={match.teams.home.logo}
+                        className="w-8 h-8 object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="flex flex-col items-center gap-1 w-1/5">
+                      <span className="text-wc-muted text-xs uppercase tracking-wide">
+                        {match.league.round.replace('Group Stage - ', 'Group ')}
+                      </span>
+                      <span
+                        className={`font-bold text-sm ${
+                          isLive
+                            ? 'text-wc-neon'
+                            : isFinished
+                              ? 'text-white'
+                              : 'text-wc-muted'
+                        }`}
+                      >
+                        {match.goals.home !== null
+                          ? `${match.goals.home} – ${match.goals.away}`
+                          : new Date(match.fixture.date).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 w-2/5">
+                      <img
+                        src={match.teams.away.logo}
+                        className="w-8 h-8 object-contain"
+                        loading="lazy"
+                      />
+                      <span className="font-bebas text-base">{match.teams.away.name}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center gap-1 w-1/5">
-                  <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">
-                    {match.league.round.replace('Group Stage - ', 'Group ')}
-                  </span>
-                  <span
-                    className={`text-xs font-bold px-3 py-0.5 rounded-full ${
-                      match.goals.home !== null
-                        ? 'bg-green-950 text-green-400 border border-green-900'
-                        : 'bg-gray-800 text-gray-400'
-                    }`}
-                  >
-                    {match.goals.home !== null
-                      ? `${match.goals.home} - ${match.goals.away}`
-                      : 'vs'}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    {new Date(match.fixture.date).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short'
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 w-2/5">
-                  <img
-                    src={match.teams.away.logo}
-                    className="w-8 h-8 object-contain"
-                  />
-                  <span className="font-semibold text-sm">
-                    {match.teams.away.name}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       </div>
     </main>
