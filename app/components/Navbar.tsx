@@ -9,7 +9,8 @@ const navLinks = [
   { href: '/bracket', label: 'Bracket' },
   { href: '/squad', label: 'Squad' },
   { href: '/predictions', label: 'Predictions' },
-  { href: '/community', label: 'Community' }
+  { href: '/community', label: 'Community' },
+  { href: '/tactics', label: 'Tactics'}
 ]
 
 export default function Navbar() {

@@ -77,12 +77,19 @@ export default function MatchPage() {
   const activeTeamRef = useRef<'home' | 'away'>('home')
   const [homeUserXI, setHomeUserXI] = useState<Record<string, any> | null>(null)
   const [awayUserXI, setAwayUserXI] = useState<Record<string, any> | null>(null)
-  const [homeUserFormation, setHomeUserFormation] = useState<string | undefined>(undefined)
-  const [awayUserFormation, setAwayUserFormation] = useState<string | undefined>(undefined)
+  const [homeUserFormation, setHomeUserFormation] = useState<
+    string | undefined
+  >(undefined)
+  const [awayUserFormation, setAwayUserFormation] = useState<
+    string | undefined
+  >(undefined)
   const supabase = createClient()
   const router = useRouter()
   const params = useParams()
   const matchId = params.id
+  const [sentiment, setSentiment] = useState<string | null | undefined>(
+    undefined
+  )
 
   useEffect(() => {
     activeTeamRef.current = activeTeam
@@ -91,7 +98,7 @@ export default function MatchPage() {
   useEffect(() => {
     async function init() {
       const {
-        data: { user },
+        data: { user }
       } = await supabase.auth.getUser()
       if (!user) {
         router.push('/')
@@ -107,8 +114,17 @@ export default function MatchPage() {
         await Promise.all([
           loadSquads(data.teams.home.id, data.teams.away.id),
           loadRatings(matchId as string),
-          loadPredictedXIs(data.teams.home.id, data.teams.away.id),
+          loadPredictedXIs(data.teams.home.id, data.teams.away.id)
         ])
+        // Fetch pre-generated sentiment
+
+        const { data: sentimentData } = await supabase
+          .from('match_sentiment')
+          .select('sentiment_text')
+          .eq('fixture_id', Number(matchId))
+          .single()
+
+        setSentiment(sentimentData?.sentiment_text ?? null)
       }
       setLoading(false)
     }
@@ -118,16 +134,19 @@ export default function MatchPage() {
   async function loadSquads(homeId: number, awayId: number) {
     const [homeRes, awayRes] = await Promise.all([
       fetch(`/api/teams/${homeId}`),
-      fetch(`/api/teams/${awayId}`),
+      fetch(`/api/teams/${awayId}`)
     ])
-    const [homeData, awayData] = await Promise.all([homeRes.json(), awayRes.json()])
+    const [homeData, awayData] = await Promise.all([
+      homeRes.json(),
+      awayRes.json()
+    ])
     setHomeSquad(homeData?.players || [])
     setAwaySquad(awayData?.players || [])
   }
 
   async function loadPredictedXIs(homeId: number, awayId: number) {
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser()
 
     const { data: xis } = await supabase
@@ -137,8 +156,12 @@ export default function MatchPage() {
       .in('team_id', [homeId, awayId])
 
     if (user) {
-      const myHomeXI = xis?.find((xi) => xi.team_id === homeId && xi.user_id === user.id)
-      const myAwayXI = xis?.find((xi) => xi.team_id === awayId && xi.user_id === user.id)
+      const myHomeXI = xis?.find(
+        (xi) => xi.team_id === homeId && xi.user_id === user.id
+      )
+      const myAwayXI = xis?.find(
+        (xi) => xi.team_id === awayId && xi.user_id === user.id
+      )
       if (myHomeXI) {
         setHomeUserXI(myHomeXI.players)
         setHomeUserFormation(myHomeXI.formation)
@@ -157,7 +180,7 @@ export default function MatchPage() {
       .eq('match_id', matchId)
 
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser()
     const { data: myRatings } = await supabase
       .from('player_ratings')
@@ -186,7 +209,7 @@ export default function MatchPage() {
 
   async function ratePlayer(player: any, teamId: number, rating: number) {
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('player_ratings').upsert(
@@ -196,7 +219,7 @@ export default function MatchPage() {
         player_id: player.id,
         player_name: player.name,
         team_id: teamId,
-        rating,
+        rating
       },
       { onConflict: 'user_id,match_id,player_id' }
     )
@@ -206,7 +229,7 @@ export default function MatchPage() {
 
   async function clearRating(playerId: number) {
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser()
     if (!user) return
     await supabase
@@ -230,14 +253,16 @@ export default function MatchPage() {
   async function saveXI(formation: string, players: any) {
     if (!match || !user) return
     const teamId =
-      activeTeamRef.current === 'home' ? match.teams.home.id : match.teams.away.id
+      activeTeamRef.current === 'home'
+        ? match.teams.home.id
+        : match.teams.away.id
     await supabase.from('predicted_xi').upsert(
       {
         user_id: user.id,
         match_id: Number(matchId),
         team_id: teamId,
         formation,
-        players,
+        players
       },
       { onConflict: 'user_id,match_id,team_id' }
     )
@@ -275,7 +300,9 @@ export default function MatchPage() {
         )
       default:
         return (
-          <span className="text-wc-muted text-xs font-bold uppercase">{short}</span>
+          <span className="text-wc-muted text-xs font-bold uppercase">
+            {short}
+          </span>
         )
     }
   }
@@ -340,7 +367,9 @@ export default function MatchPage() {
                   className="w-20 h-20 object-contain"
                   loading="lazy"
                 />
-                <p className="font-bebas text-xl text-center">{match.teams.home.name}</p>
+                <p className="font-bebas text-xl text-center">
+                  {match.teams.home.name}
+                </p>
               </div>
 
               <div className="flex flex-col items-center gap-2 w-1/5">
@@ -353,25 +382,34 @@ export default function MatchPage() {
                     </p>
                     {match.score.halftime.home !== null && (
                       <p className="text-wc-dimmed text-xs">
-                        HT: {match.score.halftime.home} – {match.score.halftime.away}
+                        HT: {match.score.halftime.home} –{' '}
+                        {match.score.halftime.away}
                       </p>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="font-sans font-bold text-3xl text-wc-muted">vs</p>
+                    <p className="font-sans font-bold text-3xl text-wc-muted">
+                      vs
+                    </p>
                     <p className="text-wc-muted text-sm">
-                      {new Date(match.fixture.date).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {new Date(match.fixture.date).toLocaleDateString(
+                        'en-GB',
+                        {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        }
+                      )}
                     </p>
                     <p className="text-wc-dimmed text-xs">
-                      {new Date(match.fixture.date).toLocaleTimeString('en-GB', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}{' '}
+                      {new Date(match.fixture.date).toLocaleTimeString(
+                        'en-GB',
+                        {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }
+                      )}{' '}
                       UTC
                     </p>
                   </>
@@ -384,11 +422,32 @@ export default function MatchPage() {
                   className="w-20 h-20 object-contain"
                   loading="lazy"
                 />
-                <p className="font-bebas text-xl text-center">{match.teams.away.name}</p>
+                <p className="font-bebas text-xl text-center">
+                  {match.teams.away.name}
+                </p>
               </div>
             </div>
           </div>
         </div>
+
+        {sentiment !== null && (
+          <div className="bg-wc-surface border border-wc-border rounded-xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1 h-4 bg-wc-red rounded-full" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-wc-muted">
+                Fan Buzz
+              </p>
+            </div>
+            {sentiment === undefined ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-3 bg-wc-border rounded w-full" />
+                <div className="h-3 bg-wc-border rounded w-4/5" />
+              </div>
+            ) : (
+              <p className="text-sm text-white leading-relaxed">{sentiment}</p>
+            )}
+          </div>
+        )}
 
         {/* Lineups section */}
         <div className="bg-wc-surface border border-wc-border p-6">
@@ -415,7 +474,11 @@ export default function MatchPage() {
                       : 'bg-transparent text-wc-muted border-wc-border hover:border-wc-border-hover hover:text-white'
                   }`}
                 >
-                  <img src={team.logo} className="w-4 h-4 object-contain" loading="lazy" />
+                  <img
+                    src={team.logo}
+                    className="w-4 h-4 object-contain"
+                    loading="lazy"
+                  />
                   {team.name}
                 </button>
               )
@@ -427,13 +490,17 @@ export default function MatchPage() {
             <div>
               <p className="text-sm font-semibold text-wc-muted mb-4">
                 Pick your predicted XI for{' '}
-                {activeTeam === 'home' ? match.teams.home.name : match.teams.away.name}
+                {activeTeam === 'home'
+                  ? match.teams.home.name
+                  : match.teams.away.name}
               </p>
               <PitchXI
                 key={activeTeam}
                 squad={activeSquad}
                 teamId={
-                  activeTeam === 'home' ? match.teams.home.id : match.teams.away.id
+                  activeTeam === 'home'
+                    ? match.teams.home.id
+                    : match.teams.away.id
                 }
                 userId={user?.id}
                 savedFormation={
@@ -441,8 +508,8 @@ export default function MatchPage() {
                 }
                 savedXI={
                   activeTeam === 'home'
-                    ? homeUserXI ?? undefined
-                    : awayUserXI ?? undefined
+                    ? (homeUserXI ?? undefined)
+                    : (awayUserXI ?? undefined)
                 }
                 onSave={saveXI}
               />
@@ -454,7 +521,9 @@ export default function MatchPage() {
             (() => {
               const squad = activeTeam === 'home' ? homeSquad : awaySquad
               const teamId =
-                activeTeam === 'home' ? match.teams.home.id : match.teams.away.id
+                activeTeam === 'home'
+                  ? match.teams.home.id
+                  : match.teams.away.id
               const grouped = groupByPosition(squad)
 
               return (
@@ -488,11 +557,15 @@ export default function MatchPage() {
                                 className="w-8 h-8 rounded-full object-cover bg-wc-border shrink-0"
                                 loading="lazy"
                                 onError={(e) => {
-                                  ;(e.target as HTMLImageElement).style.display = 'none'
+                                  ;(
+                                    e.target as HTMLImageElement
+                                  ).style.display = 'none'
                                 }}
                               />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{player.name}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {player.name}
+                                </p>
                               </div>
                               {avgRatings[player.id] && (
                                 <span className="flex items-center gap-1 text-yellow-400 text-xs font-bold shrink-0">
