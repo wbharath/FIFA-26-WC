@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 interface Team {
-  id: number
-  name: string
-  shortName: string
-  tla: string
-  crest: string
+  team: {
+    id: number
+    name: string
+    logo: string
+    country: string
+  }
 }
 
 export default function SelectTeam() {
@@ -43,14 +44,14 @@ export default function SelectTeam() {
 
       const res = await fetch('/api/teams')
       const data = await res.json()
-      setTeams(data.teams || [])
+      setTeams(data || [])
       setLoading(false)
     }
     init()
   }, [])
 
   async function pickTeam(team: Team) {
-    setSelected(team.id)
+    setSelected(team.team.id)
     setSaving(true)
     const {
       data: { user }
@@ -60,9 +61,9 @@ export default function SelectTeam() {
     await supabase.from('user_profiles').upsert({
       id: user.id,
       email: user.email,
-      favourite_team_id: team.id,
-      favourite_team_name: team.name,
-      favourite_team_crest: team.crest
+      favourite_team_id: team.team.id,
+      favourite_team_name: team.team.name,
+      favourite_team_crest: team.team.logo
     })
 
     router.push('/dashboard')
@@ -92,31 +93,35 @@ export default function SelectTeam() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-          {teams.map((team) => (
-            <button
-              key={team.id}
-              onClick={() => pickTeam(team)}
-              disabled={saving}
-              className={`group flex flex-col items-center gap-2.5 p-4 rounded-xl border transition-all duration-200 ${
-                selected === team.id
-                  ? 'border-yellow-500/70 bg-yellow-950/30 shadow-lg shadow-yellow-950/40'
-                  : 'border-gray-800 bg-gray-900/50 hover:border-gray-600 hover:bg-gray-800/60 hover:shadow-lg hover:shadow-black/30'
-              } disabled:opacity-60`}
-            >
-              <img
-                src={team.crest}
-                alt={team.name}
-                className="w-12 h-12 object-contain transition-transform duration-200 group-hover:scale-110"
-              />
-              <span
-                className={`text-xs text-center font-medium leading-tight transition-colors ${
-                  selected === team.id ? 'text-yellow-400' : 'text-gray-400 group-hover:text-gray-200'
-                }`}
+          {[...teams]
+            .sort((a, b) => a.team.name.localeCompare(b.team.name))
+            .map((t) => (
+              <button
+                key={t.team.id}
+                onClick={() => pickTeam(t)}
+                disabled={saving}
+                className={`group flex flex-col items-center gap-2.5 p-4 rounded-xl border transition-all duration-200 ${
+                  selected === t.team.id
+                    ? 'border-yellow-500/70 bg-yellow-950/30 shadow-lg shadow-yellow-950/40'
+                    : 'border-gray-800 bg-gray-900/50 hover:border-gray-600 hover:bg-gray-800/60 hover:shadow-lg hover:shadow-black/30'
+                } disabled:opacity-60`}
               >
-                {team.shortName}
-              </span>
-            </button>
-          ))}
+                <img
+                  src={t.team.logo}
+                  alt={t.team.name}
+                  className="w-12 h-12 object-contain transition-transform duration-200 group-hover:scale-110"
+                />
+                <span
+                  className={`text-xs text-center font-medium leading-tight transition-colors ${
+                    selected === t.team.id
+                      ? 'text-yellow-400'
+                      : 'text-gray-400 group-hover:text-gray-200'
+                  }`}
+                >
+                  {t.team.name}
+                </span>
+              </button>
+            ))}
         </div>
       </div>
     </main>

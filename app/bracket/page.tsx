@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 interface Match {
-  id: number
-  utcDate: string
-  stage: string
+  fixture: { id: number; date: string }
+  league: { round: string }
+  teams: {
+    home: { id: number; name: string; logo: string }
+    away: { id: number; name: string; logo: string }
+  }
+  goals: { home: number | null; away: number | null }
   group: string | null
-  homeTeam: { id: number; name: string; shortName: string; crest: string }
-  awayTeam: { id: number; name: string; shortName: string; crest: string }
-  score: { fulltime: { home: number | null; away: number | null } }
 }
 
 interface Prediction {
@@ -39,10 +40,10 @@ export default function Bracket() {
 
       const res = await fetch('/api/matches')
       const data = await res.json()
-      setMatches(data.matches || [])
+      setMatches(data.fixtures || [])
 
       const { data: existingPredictions } = await supabase
-        .from('/predictions')
+        .from('predictions')
         .select('*')
         .eq('user_id', user.id)
 
@@ -58,42 +59,42 @@ export default function Bracket() {
 
   async function pickWinner(
     match: Match,
-    team: { id: number; name: string; shortName: string; crest: string }
+    team: { id: number; name: string; logo: string }
   ) {
-    setSaving(match.id)
+    setSaving(match.fixture.id)
     const {
       data: { user }
     } = await supabase.auth.getUser()
     if (!user) return
+
     await supabase.from('predictions').upsert(
       {
         user_id: user.id,
-        match_id: match.id,
+        match_id: match.fixture.id,
         predicted_winner_id: team.id,
         predicted_winner_name: team.name,
-        predicted_winner_crest: team.crest
+        predicted_winner_crest: team.logo
       },
       { onConflict: 'user_id,match_id' }
     )
 
     setPredictions((prev) => ({
       ...prev,
-      [match.id]: { match_id: match.id, predicted_winner_id: team.id }
+      [match.fixture.id]: {
+        match_id: match.fixture.id,
+        predicted_winner_id: team.id
+      }
     }))
     setSaving(null)
   }
 
-  const groupStageMatches = matches.filter((m) => m.stage === 'GROUP_STAGE')
-
-  const fixturesByGroup = groupStageMatches.reduce(
-    (acc, match) => {
-      const group = match.group?.replace('GROUP_', 'Group ') || 'Unknown'
-      if (!acc[group]) acc[group] = []
-      acc[group].push(match)
-      return acc
-    },
-    {} as Record<string, Match[]>
-  )
+  const fixturesByGroup: Record<string, Match[]> = {}
+  matches
+    .filter((m) => m.group)
+    .forEach((match) => {
+      if (!fixturesByGroup[match.group!]) fixturesByGroup[match.group!] = []
+      fixturesByGroup[match.group!].push(match)
+    })
 
   if (loading)
     return (
@@ -113,7 +114,9 @@ export default function Bracket() {
             FIFA World Cup 2026
           </p>
           <h1 className="text-4xl font-black">Bracket & Predictions</h1>
-          <p className="text-gray-500 mt-2 text-sm">Tap a team to pick the winner of each match</p>
+          <p className="text-gray-500 mt-2 text-sm">
+            Tap a team to pick the winner of each match
+          </p>
         </div>
 
         <div className="flex items-center gap-3 mb-6">
@@ -135,39 +138,46 @@ export default function Bracket() {
 
                 <div className="p-3 flex flex-col gap-2.5">
                   {groupMatches.map((match) => {
-                    const prediction = predictions[match.id]
-                    const isSaving = saving === match.id
+                    const prediction = predictions[match.fixture.id]
+                    const isSaving = saving === match.fixture.id
 
                     return (
                       <div
-                        key={match.id}
+                        key={match.fixture.id}
                         className="bg-gray-800/50 rounded-xl p-3 border border-gray-700/50"
                       >
                         <p className="text-gray-500 text-xs text-center mb-2.5 font-medium">
-                          {new Date(match.utcDate).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short'
-                          })}
+                          {new Date(match.fixture.date).toLocaleDateString(
+                            'en-GB',
+                            {
+                              day: 'numeric',
+                              month: 'short'
+                            }
+                          )}
                         </p>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => pickWinner(match, match.homeTeam)}
+                            onClick={() => pickWinner(match, match.teams.home)}
                             disabled={isSaving}
                             className={`flex-1 flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-200 ${
-                              prediction?.predicted_winner_id === match.homeTeam.id
+                              prediction?.predicted_winner_id ===
+                              match.teams.home.id
                                 ? 'border-yellow-500/60 bg-yellow-950/40 shadow-lg shadow-yellow-950/30'
                                 : 'border-gray-700 hover:border-gray-500 hover:bg-gray-700/40'
                             } disabled:opacity-60`}
                           >
                             <img
-                              src={match.homeTeam.crest}
+                              src={match.teams.home.logo}
                               className="w-9 h-9 object-contain"
                             />
                             <span className="text-xs text-center font-medium text-gray-200">
-                              {match.homeTeam.shortName}
+                              {match.teams.home.name}
                             </span>
-                            {prediction?.predicted_winner_id === match.homeTeam.id && (
-                              <span className="text-yellow-500 text-xs font-bold">✓ Pick</span>
+                            {prediction?.predicted_winner_id ===
+                              match.teams.home.id && (
+                              <span className="text-yellow-500 text-xs font-bold">
+                                ✓ Pick
+                              </span>
                             )}
                           </button>
 
@@ -178,23 +188,27 @@ export default function Bracket() {
                           </div>
 
                           <button
-                            onClick={() => pickWinner(match, match.awayTeam)}
+                            onClick={() => pickWinner(match, match.teams.away)}
                             disabled={isSaving}
                             className={`flex-1 flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-200 ${
-                              prediction?.predicted_winner_id === match.awayTeam.id
+                              prediction?.predicted_winner_id ===
+                              match.teams.away.id
                                 ? 'border-yellow-500/60 bg-yellow-950/40 shadow-lg shadow-yellow-950/30'
                                 : 'border-gray-700 hover:border-gray-500 hover:bg-gray-700/40'
                             } disabled:opacity-60`}
                           >
                             <img
-                              src={match.awayTeam.crest}
+                              src={match.teams.away.logo}
                               className="w-9 h-9 object-contain"
                             />
                             <span className="text-xs text-center font-medium text-gray-200">
-                              {match.awayTeam.shortName}
+                              {match.teams.away.name}
                             </span>
-                            {prediction?.predicted_winner_id === match.awayTeam.id && (
-                              <span className="text-yellow-500 text-xs font-bold">✓ Pick</span>
+                            {prediction?.predicted_winner_id ===
+                              match.teams.away.id && (
+                              <span className="text-yellow-500 text-xs font-bold">
+                                ✓ Pick
+                              </span>
                             )}
                           </button>
                         </div>

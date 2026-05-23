@@ -47,8 +47,8 @@ export default function Dashboard() {
   async function loadMatches(teamId: number) {
     const res = await fetch('/api/matches')
     const data = await res.json()
-    const teamMatches = data.matches.filter(
-      (m: any) => m.homeTeam.id === teamId || m.awayTeam.id === teamId
+    const teamMatches = (data.fixtures || []).filter(
+      (m: any) => m.teams.home.id === teamId || m.teams.away.id === teamId
     )
     setMatches(teamMatches)
   }
@@ -122,48 +122,46 @@ export default function Dashboard() {
 
         <div className="flex flex-col gap-3">
           {matches.map((match) => (
-            <Link href={`/match/${match.id}`} key={match.id}>
+            <Link href={`/match/${match.fixture.id}`} key={match.fixture.id}>
               <div className="group bg-gray-900/50 hover:bg-gray-800/60 border border-gray-800 hover:border-gray-700 rounded-xl p-4 flex items-center justify-between transition-all duration-200">
                 <div className="flex items-center gap-3 w-2/5 justify-end">
                   <span className="font-semibold text-right text-sm">
-                    {match.homeTeam.shortName}
+                    {match.teams.home.name}
                   </span>
                   <img
-                    src={match.homeTeam.crest}
+                    src={match.teams.home.logo}
                     className="w-8 h-8 object-contain"
                   />
                 </div>
-
                 <div className="flex flex-col items-center gap-1 w-1/5">
                   <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">
-                    {match.group?.replace('GROUP_', 'Group ')}
+                    {match.league.round.replace('Group Stage - ', 'Group ')}
                   </span>
                   <span
                     className={`text-xs font-bold px-3 py-0.5 rounded-full ${
-                      match.score.fullTime.home !== null
+                      match.goals.home !== null
                         ? 'bg-green-950 text-green-400 border border-green-900'
                         : 'bg-gray-800 text-gray-400'
                     }`}
                   >
-                    {match.score.fullTime.home !== null
-                      ? `${match.score.fullTime.home} - ${match.score.fullTime.away}`
+                    {match.goals.home !== null
+                      ? `${match.goals.home} - ${match.goals.away}`
                       : 'vs'}
                   </span>
                   <span className="text-gray-500 text-xs">
-                    {new Date(match.utcDate).toLocaleDateString('en-GB', {
+                    {new Date(match.fixture.date).toLocaleDateString('en-GB', {
                       day: 'numeric',
                       month: 'short'
                     })}
                   </span>
                 </div>
-
                 <div className="flex items-center gap-3 w-2/5">
                   <img
-                    src={match.awayTeam.crest}
+                    src={match.teams.away.logo}
                     className="w-8 h-8 object-contain"
                   />
                   <span className="font-semibold text-sm">
-                    {match.awayTeam.shortName}
+                    {match.teams.away.name}
                   </span>
                 </div>
               </div>

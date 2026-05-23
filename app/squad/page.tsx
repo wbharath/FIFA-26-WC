@@ -4,18 +4,23 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import PitchXI from '../components/PitchXI'
+
 interface Player {
   id: number
   name: string
   position: string
-  dateOfBirth: string
-  nationality: string
+  number: number | null
+  photo: string
+  age: number
 }
+
 interface Team {
-  id: number
-  name: string
-  shortName: string
-  crest: string
+  team: {
+    id: number
+    name: string
+    logo: string
+    country: string
+  }
 }
 
 export default function Squad() {
@@ -42,7 +47,7 @@ export default function Squad() {
 
       const res = await fetch('/api/teams')
       const data = await res.json()
-      setTeams(data.teams || [])
+      setTeams(data || [])
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -64,7 +69,7 @@ export default function Squad() {
     const res = await fetch(`/api/teams/${teamId}`)
     const data = await res.json()
     setTeamInfo(data)
-    setSquad(data.squad || [])
+    setSquad(data?.players || [])
     setSquadLoading(false)
   }
 
@@ -74,30 +79,20 @@ export default function Squad() {
   }
 
   const positionGroups: Record<string, Player[]> = {
-    GoalKeepers: squad.filter((p) => p.position === 'Goalkeepers'),
-    Defenders: squad.filter(
-      (p) =>
-        p.position === 'Defence' ||
-        p.position === 'Centre-Back' ||
-        p.position === 'Left-Back' ||
-        p.position === 'Right-Back'
-    ),
-    Midfielders: squad.filter(
-      (p) =>
-        p.position === 'Midfield' ||
-        p.position === 'Central Midfield' ||
-        p.position === 'Defensive Midfield' ||
-        p.position === 'Attacking Midfield' ||
-        p.position === 'Right Midfield' ||
-        p.position === 'Left Midfield'
-    ),
-    Forwards: squad.filter(
-      (p) =>
-        p.position === 'Offence' ||
-        p.position === 'Centre-Forward' ||
-        p.position === 'Left Winger' ||
-        p.position === 'Right Winger'
-    )
+    Goalkeepers: squad.filter((p) => p.position === 'Goalkeeper'),
+    Defenders: squad.filter((p) => p.position === 'Defender'),
+    Midfielders: squad.filter((p) => p.position === 'Midfielder'),
+    Forwards: squad.filter((p) => p.position === 'Attacker')
+  }
+
+  async function saveXI(formation: string, players: any) {
+    await supabase
+      .from('predicted_xi')
+      .upsert(
+        { user_id: userId, team_id: selectedTeamId, formation, players },
+        { onConflict: 'user_id,team_id' }
+      )
+    alert('XI Saved!')
   }
 
   if (loading)
@@ -107,19 +102,6 @@ export default function Squad() {
       </main>
     )
 
-  async function saveXI(formation: string, players: any) {
-    const supabase = createClient()
-    await supabase.from('predicted_xi').upsert(
-      {
-        user_id: userId,
-        team_id: selectedTeamId,
-        formation,
-        players
-      },
-      { onConflict: 'user_id,team_id' }
-    )
-    alert('XI Saved!')
-  }
   return (
     <main className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-5xl mx-auto">
@@ -131,21 +113,24 @@ export default function Squad() {
           className="bg-gray-800 text-white border border-gray-700 rounded-lg px-4 py-2 mb-8 w-full md:w-auto"
         >
           <option value="">Select a team</option>
-          {teams
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
+          {[...teams]
+            .sort((a, b) => a.team.name.localeCompare(b.team.name))
+            .map((t) => (
+              <option key={t.team.id} value={t.team.id}>
+                {t.team.name}
               </option>
             ))}
         </select>
 
         {teamInfo && (
           <div className="flex items-center gap-4 mb-8">
-            <img src={teamInfo.crest} className="w-16 h-16 object-contain" />
+            <img
+              src={teamInfo.team.logo}
+              className="w-16 h-16 object-contain"
+            />
             <div>
-              <h2 className="text-2xl font-bold">{teamInfo.name}</h2>
-              <p className="text-gray-400">{teamInfo.area?.name}</p>
+              <h2 className="text-2xl font-bold">{teamInfo.team.name}</h2>
+              <p className="text-gray-400">{teamInfo.team.country}</p>
             </div>
           </div>
         )}
@@ -167,16 +152,23 @@ export default function Squad() {
                           key={player.id}
                           className="bg-gray-900 rounded-xl p-4 flex items-center gap-3"
                         >
-                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-lg font-bold">
-                            {player.name.charAt(0)}
-                          </div>
+                          <img
+                            src={player.photo}
+                            alt={player.name}
+                            className="w-10 h-10 rounded-full object-cover bg-gray-700 flex-shrink-0"
+                            onError={(e) => {
+                              ;(e.target as HTMLImageElement).style.display =
+                                'none'
+                            }}
+                          />
                           <div>
                             <p className="font-semibold">{player.name}</p>
                             <p className="text-gray-400 text-xs">
                               {player.position}
+                              {player.number ? ` · #${player.number}` : ''}
                             </p>
                             <p className="text-gray-500 text-xs">
-                              {player.nationality}
+                              Age {player.age}
                             </p>
                           </div>
                         </div>
@@ -187,6 +179,7 @@ export default function Squad() {
             )}
           </div>
         )}
+
         {squad.length > 0 && (
           <div className="mt-8">
             <h3 className="text-xl font-bold mb-4 text-green-400">
