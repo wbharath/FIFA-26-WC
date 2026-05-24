@@ -352,7 +352,7 @@ export default function MatchPage() {
 
         {/* Match header */}
         <div className="bg-wc-surface border border-wc-border overflow-hidden mb-6">
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <div className="flex items-center justify-between mb-6">
               <span className="text-wc-dimmed text-xs uppercase tracking-widest">
                 {formatStage(match.league.round)}
@@ -361,13 +361,13 @@ export default function MatchPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex flex-col items-center gap-3 w-2/5">
+              <div className="flex flex-col items-center gap-2 sm:gap-3 w-2/5">
                 <img
                   src={match.teams.home.logo}
-                  className="w-20 h-20 object-contain"
+                  className="w-12 h-12 sm:w-20 sm:h-20 object-contain"
                   loading="lazy"
                 />
-                <p className="font-bebas text-xl text-center">
+                <p className="font-bebas text-sm sm:text-xl text-center">
                   {match.teams.home.name}
                 </p>
               </div>
@@ -375,7 +375,7 @@ export default function MatchPage() {
               <div className="flex flex-col items-center gap-2 w-1/5">
                 {match.goals.home !== null ? (
                   <>
-                    <p className="font-sans font-black text-6xl leading-none tracking-tight">
+                    <p className="font-sans font-black text-3xl sm:text-6xl leading-none tracking-tight">
                       {match.goals.home}
                       <span className="text-wc-dimmed mx-2 font-light">–</span>
                       {match.goals.away}
@@ -416,13 +416,13 @@ export default function MatchPage() {
                 )}
               </div>
 
-              <div className="flex flex-col items-center gap-3 w-2/5">
+              <div className="flex flex-col items-center gap-2 sm:gap-3 w-2/5">
                 <img
                   src={match.teams.away.logo}
-                  className="w-20 h-20 object-contain"
+                  className="w-12 h-12 sm:w-20 sm:h-20 object-contain"
                   loading="lazy"
                 />
-                <p className="font-bebas text-xl text-center">
+                <p className="font-bebas text-sm sm:text-xl text-center">
                   {match.teams.away.name}
                 </p>
               </div>
@@ -468,7 +468,7 @@ export default function MatchPage() {
                 <button
                   key={side}
                   onClick={() => setActiveTeam(side)}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold uppercase tracking-wide border transition-all duration-150 ${
+                  className={`flex flex-1 sm:flex-none items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold uppercase tracking-wide border transition-all duration-150 min-w-0 ${
                     activeTeam === side
                       ? 'bg-wc-red text-white border-wc-red'
                       : 'bg-transparent text-wc-muted border-wc-border hover:border-wc-border-hover hover:text-white'
@@ -476,10 +476,10 @@ export default function MatchPage() {
                 >
                   <img
                     src={team.logo}
-                    className="w-4 h-4 object-contain"
+                    className="w-4 h-4 object-contain shrink-0"
                     loading="lazy"
                   />
-                  {team.name}
+                  <span className="truncate">{team.name}</span>
                 </button>
               )
             })}

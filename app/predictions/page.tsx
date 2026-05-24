@@ -88,8 +88,8 @@ function MatchRow({
       </div>
 
       {/* Probability bar */}
-      <div className="flex items-center gap-2 w-52 shrink-0 mx-3">
-        <span className="text-xs font-bold text-wc-red w-8 text-right shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 w-14 sm:w-52 shrink-0 mx-1 sm:mx-3">
+        <span className="hidden sm:block text-xs font-bold text-wc-red w-8 text-right shrink-0">
           {homeWinPct}%
         </span>
         <div className="flex flex-1 h-1.5 overflow-hidden">
@@ -97,7 +97,7 @@ function MatchRow({
           <div className="bg-wc-border h-full" style={{ width: `${drawPct}%` }} />
           <div className="bg-wc-blue h-full" style={{ width: `${awayWinPct}%` }} />
         </div>
-        <span className="text-xs font-bold text-wc-blue w-8 shrink-0">
+        <span className="hidden sm:block text-xs font-bold text-wc-blue w-8 shrink-0">
           {awayWinPct}%
         </span>
       </div>

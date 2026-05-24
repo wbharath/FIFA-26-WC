@@ -222,7 +222,7 @@ function PlayerPanel({
   const color = side === 'home' ? HOME_COLOR : AWAY_COLOR
 
   return (
-    <div className="w-48 flex flex-col gap-3 shrink-0">
+    <div className="w-full md:w-48 flex flex-col gap-3 shrink-0">
       <TeamSelect
         side={side}
         teams={teams}
@@ -307,6 +307,7 @@ export default function TacticsPage() {
   }>({ home: new Set(), away: new Set() })
   const [placedPlayers, setPlacedPlayers] = useState<PlacedPlayer[]>([])
   const [loading, setLoading] = useState(true)
+  const [mobileTab, setMobileTab] = useState<'home' | 'pitch' | 'away'>('pitch')
   const pitchRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef<{
     playerId: number
@@ -505,24 +506,43 @@ export default function TacticsPage() {
           <h1 className="font-bebas text-4xl uppercase">Tactical Board</h1>
         </div>
 
+        {/* Mobile tab bar */}
+        <div className="flex md:hidden mb-4 border border-wc-border rounded-sm overflow-hidden">
+          {(['home', 'pitch', 'away'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                mobileTab === tab
+                  ? 'bg-wc-red text-white'
+                  : 'text-wc-muted hover:text-white hover:bg-wc-surface'
+              }`}
+            >
+              {tab === 'home' ? 'Home' : tab === 'pitch' ? 'Pitch' : 'Away'}
+            </button>
+          ))}
+        </div>
+
         <div className="flex gap-4 items-start">
-          <PlayerPanel
-            side="home"
-            teams={teams}
-            homeTeamId={homeTeamId}
-            awayTeamId={awayTeamId}
-            homeData={homeData}
-            awayData={awayData}
-            selectedPlayers={selectedPlayers}
-            setHomeTeamId={setHomeTeamId}
-            setAwayTeamId={setAwayTeamId}
-            loadTeam={loadTeam}
-            togglePlayer={togglePlayer}
-          />
+          <div className={`shrink-0 ${mobileTab !== 'home' ? 'hidden md:block' : ''}`}>
+            <PlayerPanel
+              side="home"
+              teams={teams}
+              homeTeamId={homeTeamId}
+              awayTeamId={awayTeamId}
+              homeData={homeData}
+              awayData={awayData}
+              selectedPlayers={selectedPlayers}
+              setHomeTeamId={setHomeTeamId}
+              setAwayTeamId={setAwayTeamId}
+              loadTeam={loadTeam}
+              togglePlayer={togglePlayer}
+            />
+          </div>
 
           <div
             ref={pitchRef}
-            className="relative flex-1 select-none"
+            className={`relative select-none flex-1 ${mobileTab !== 'pitch' ? 'hidden md:block' : ''}`}
             style={{
               aspectRatio: '105 / 68',
               background:
@@ -629,19 +649,21 @@ export default function TacticsPage() {
             })}
           </div>
 
-          <PlayerPanel
-            side="away"
-            teams={teams}
-            homeTeamId={homeTeamId}
-            awayTeamId={awayTeamId}
-            homeData={homeData}
-            awayData={awayData}
-            selectedPlayers={selectedPlayers}
-            setHomeTeamId={setHomeTeamId}
-            setAwayTeamId={setAwayTeamId}
-            loadTeam={loadTeam}
-            togglePlayer={togglePlayer}
-          />
+          <div className={`shrink-0 ${mobileTab !== 'away' ? 'hidden md:block' : ''}`}>
+            <PlayerPanel
+              side="away"
+              teams={teams}
+              homeTeamId={homeTeamId}
+              awayTeamId={awayTeamId}
+              homeData={homeData}
+              awayData={awayData}
+              selectedPlayers={selectedPlayers}
+              setHomeTeamId={setHomeTeamId}
+              setAwayTeamId={setAwayTeamId}
+              loadTeam={loadTeam}
+              togglePlayer={togglePlayer}
+            />
+          </div>
         </div>
       </div>
     </main>

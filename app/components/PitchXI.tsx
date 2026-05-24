@@ -91,7 +91,7 @@ export default function PitchXI({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         <label className="text-gray-400 text-sm">Formation:</label>
         <select
           value={formation}
@@ -115,7 +115,7 @@ export default function PitchXI({
         </button>
       </div>
 
-      <div className="flex gap-6 justify-center items-start">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-stretch sm:items-start">
         {/* Pitch */}
         <div
           className="relative rounded-2xl overflow-hidden"
@@ -384,7 +384,7 @@ export default function PitchXI({
 
         {/* Squad picker */}
         {selectedSlot && (
-          <div className="w-48 bg-gray-900 rounded-xl p-3 overflow-y-auto max-h-96">
+          <div className="w-full sm:w-48 bg-gray-900 rounded-xl p-3 overflow-y-auto max-h-64 sm:max-h-96">
             <p className="text-gray-400 text-xs mb-3 font-semibold">
               Select {selectedSlot.split('-')[0]}
             </p>

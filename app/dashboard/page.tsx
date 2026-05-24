@@ -106,13 +106,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
             <div className="relative shrink-0">
               <div className="absolute inset-0 blur-2xl bg-wc-red/20 rounded-full scale-[1.8]" />
               <img
                 src={profile.favourite_team_crest}
                 alt={profile.favourite_team_name}
-                className="relative w-24 h-24 object-contain drop-shadow-2xl"
+                className="relative w-16 h-16 sm:w-24 sm:h-24 object-contain drop-shadow-2xl"
                 loading="lazy"
               />
             </div>
@@ -147,13 +147,13 @@ export default function Dashboard() {
               <Link href={`/match/${match.fixture.id}`} key={match.fixture.id}>
                 <div className="group bg-wc-surface border-b border-wc-border hover:bg-wc-surface-2 transition-colors">
                   <div className="flex items-center justify-between px-4 h-13">
-                    <div className="flex items-center gap-3 w-2/5 justify-end">
-                      <span className="font-bebas text-base text-right">
+                    <div className="flex items-center gap-2 sm:gap-3 w-2/5 justify-end">
+                      <span className="font-bebas text-sm sm:text-base text-right truncate">
                         {match.teams.home.name}
                       </span>
                       <img
                         src={match.teams.home.logo}
-                        className="w-8 h-8 object-contain"
+                        className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0"
                         loading="lazy"
                       />
                     </div>
@@ -178,13 +178,13 @@ export default function Dashboard() {
                             })}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 w-2/5">
+                    <div className="flex items-center gap-2 sm:gap-3 w-2/5">
                       <img
                         src={match.teams.away.logo}
-                        className="w-8 h-8 object-contain"
+                        className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0"
                         loading="lazy"
                       />
-                      <span className="font-bebas text-base">{match.teams.away.name}</span>
+                      <span className="font-bebas text-sm sm:text-base truncate">{match.teams.away.name}</span>
                     </div>
                   </div>
                 </div>

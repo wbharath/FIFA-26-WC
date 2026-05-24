@@ -311,7 +311,8 @@ export default function Fixtures() {
                     {group}
                   </h2>
 
-                  <table className="w-full text-xs mb-4">
+                  <div className="overflow-x-auto mb-4">
+                    <table className="w-full text-xs min-w-[380px]">
                     <thead>
                       <tr className="text-wc-muted border-b border-wc-border">
                         <th className="text-left py-1.5 px-1 font-medium">Team</th>
@@ -349,7 +350,8 @@ export default function Fixtures() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
 
                   <div>
                     {[...matches.filter((m) => m.group === group)]
