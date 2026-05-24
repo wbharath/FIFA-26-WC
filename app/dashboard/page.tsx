@@ -146,20 +146,23 @@ export default function Dashboard() {
             return (
               <Link href={`/match/${match.fixture.id}`} key={match.fixture.id}>
                 <div className="group bg-wc-surface border-b border-wc-border hover:bg-wc-surface-2 transition-colors">
-                  <div className="flex items-center justify-between px-4 h-13">
-                    <div className="flex items-center gap-2 sm:gap-3 w-2/5 justify-end">
-                      <span className="font-bebas text-sm sm:text-base text-right truncate">
+                  <div className=”flex items-center justify-between px-4 py-3 sm:py-0 sm:h-13”>
+                    <div className=”flex items-center gap-2 sm:gap-3 w-2/5 justify-end min-w-0”>
+                      <span className=”font-bebas text-sm sm:text-base text-right truncate”>
                         {match.teams.home.name}
                       </span>
                       <img
                         src={match.teams.home.logo}
-                        className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0"
-                        loading="lazy"
+                        className=”w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0”
+                        loading=”lazy”
                       />
                     </div>
-                    <div className="flex flex-col items-center gap-1 w-1/5">
-                      <span className="text-wc-muted text-xs uppercase tracking-wide">
+                    <div className=”flex flex-col items-center gap-0.5 w-1/4 sm:w-1/5 shrink-0”>
+                      <span className=”hidden sm:block text-wc-muted text-xs uppercase tracking-wide”>
                         {match.league.round.replace('Group Stage - ', 'Group ')}
+                      </span>
+                      <span className=”text-wc-dimmed text-[10px] uppercase tracking-wide sm:hidden”>
+                        {match.league.round.replace('Group Stage - ', 'G')}
                       </span>
                       <span
                         className={`font-bold text-sm ${
@@ -171,20 +174,20 @@ export default function Dashboard() {
                         }`}
                       >
                         {match.goals.home !== null
-                          ? `${match.goals.home} â€“ ${match.goals.away}`
+                          ? `${match.goals.home} – ${match.goals.away}`
                           : new Date(match.fixture.date).toLocaleDateString('en-GB', {
                               day: 'numeric',
                               month: 'short',
                             })}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 w-2/5">
+                    <div className=”flex items-center gap-2 sm:gap-3 w-2/5 min-w-0”>
                       <img
                         src={match.teams.away.logo}
-                        className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0"
-                        loading="lazy"
+                        className=”w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0”
+                        loading=”lazy”
                       />
-                      <span className="font-bebas text-sm sm:text-base truncate">{match.teams.away.name}</span>
+                      <span className=”font-bebas text-sm sm:text-base truncate”>{match.teams.away.name}</span>
                     </div>
                   </div>
                 </div>
