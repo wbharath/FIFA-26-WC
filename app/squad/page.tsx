@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, memo } from 'react'
+import { useEffect, useState, memo, useRef } from 'react'
+import { ChevronDown, Search } from 'lucide-react'
 import PitchXI from '../components/PitchXI'
 
 interface Player {
@@ -21,6 +22,110 @@ interface Team {
     logo: string
     country: string
   }
+}
+
+function TeamSelect({
+  teams,
+  value,
+  onChange,
+}: {
+  teams: Team[]
+  value: number | null
+  onChange: (id: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const selected = teams.find((t) => t.team.id === value) ?? null
+  const filtered = search
+    ? teams.filter((t) => t.team.name.toLowerCase().includes(search.toLowerCase()))
+    : teams
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 10)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative w-full md:w-72">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2.5 bg-wc-surface border text-left transition-all duration-150 hover:bg-wc-surface-2 rounded-sm"
+        style={{ borderColor: selected ? '#E8002D' : '#2A2A2A' }}
+      >
+        {selected ? (
+          <>
+            <img src={selected.team.logo} className="w-5 h-5 object-contain shrink-0" loading="lazy" />
+            <span className="text-sm font-semibold text-white flex-1 truncate">{selected.team.name}</span>
+          </>
+        ) : (
+          <span className="text-sm text-wc-dimmed flex-1">Select a team</span>
+        )}
+        <ChevronDown
+          size={14}
+          className="text-wc-muted shrink-0 transition-transform duration-150"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-wc-surface border border-wc-border shadow-2xl rounded-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-wc-border">
+            <Search size={12} className="text-wc-dimmed shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search teams..."
+              className="flex-1 bg-transparent text-white text-xs outline-none placeholder:text-wc-dimmed"
+            />
+          </div>
+          <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
+            {filtered.length === 0 ? (
+              <p className="text-[11px] text-wc-dimmed text-center py-4">No teams found</p>
+            ) : (
+              filtered.map((t) => {
+                const active = value === t.team.id
+                return (
+                  <button
+                    key={t.team.id}
+                    onClick={() => {
+                      onChange(t.team.id)
+                      setOpen(false)
+                      setSearch('')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors duration-100 hover:bg-wc-surface-2"
+                    style={{
+                      background: active ? '#E8002D18' : undefined,
+                      borderLeft: active ? '2px solid #E8002D' : '2px solid transparent',
+                    }}
+                  >
+                    <img src={t.team.logo} className="w-5 h-5 object-contain shrink-0" loading="lazy" />
+                    <span className="text-xs truncate" style={{ color: active ? 'white' : '#A0A0A0' }}>
+                      {t.team.name}
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const PlayerCard = memo(function PlayerCard({ player }: { player: Player }) {
@@ -149,20 +254,13 @@ export default function Squad() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <h1 className="font-bebas text-5xl uppercase mb-6">Squad Explorer</h1>
 
-        <select
-          value={selectedTeamId || ''}
-          onChange={(e) => handleTeamChange(Number(e.target.value))}
-          className="bg-wc-surface text-white border border-wc-border px-4 py-2.5 mb-8 w-full md:w-auto focus:outline-none focus:border-wc-red transition-colors appearance-none"
-        >
-          <option value="">Select a team</option>
-          {[...teams]
-            .sort((a, b) => a.team.name.localeCompare(b.team.name))
-            .map((t) => (
-              <option key={t.team.id} value={t.team.id}>
-                {t.team.name}
-              </option>
-            ))}
-        </select>
+        <div className="mb-8">
+          <TeamSelect
+            teams={[...teams].sort((a, b) => a.team.name.localeCompare(b.team.name))}
+            value={selectedTeamId}
+            onChange={handleTeamChange}
+          />
+        </div>
 
         {teamInfo && (
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-wc-border">
