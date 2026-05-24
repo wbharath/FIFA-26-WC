@@ -15,7 +15,7 @@ async function fetchNewsForMatch(
   home: string,
   away: string
 ): Promise<string[]> {
-  const query = encodeURIComponent(`${home} ${away} World Cup 2026`)
+  const query = encodeURIComponent(`"${home}" "${away}" FIFA World Cup 2026`)
   const url = `https://newsapi.org/v2/everything?q=${query}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`
 
   const res = await fetch(url)

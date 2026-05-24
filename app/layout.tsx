@@ -13,11 +13,28 @@ const inter = Inter({
   subsets: ['latin']
 })
 
+
 export const metadata: Metadata = {
-  title: 'KickBase',
-  description: 'Your World Cup 2026 HQ',
+  title: 'KickBase | Your Football Community',
+  description:
+    'Live fixtures, match predictions, player ratings and tactical discussions — your base for World Cup 2026.',
   icons: {
     icon: '/favicon.svg'
+  },
+  openGraph: {
+    title: 'KickBase | Your Football Community',
+    description:
+      'Live fixtures, match predictions, player ratings and tactical discussions — your base for World Cup 2026.',
+    url: 'https://fifa-26-wc.vercel.app',
+    siteName: 'KickBase',
+    images: [
+      {
+        url: 'https://fifa-26-wc.vercel.app/og-preview.png',
+        width: 1200,
+        height: 630
+      }
+    ],
+    type: 'website'
   }
 }
 
