@@ -5,21 +5,24 @@ import Navbar from '@/app/components/Navbar'
 const bebasNeue = Bebas_Neue({
   weight: '400',
   variable: '--bebas',
-  subsets: ['latin'],
+  subsets: ['latin']
 })
 
 const inter = Inter({
   variable: '--inter',
-  subsets: ['latin'],
+  subsets: ['latin']
 })
 
 export const metadata: Metadata = {
-  title: 'FIFA WC 2026',
-  description: 'Your Fantasy Football app',
+  title: 'KickBase',
+  description: 'Your World Cup 2026 HQ',
+  icons: {
+    icon: '/favicon.svg'
+  }
 }
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
   children: React.ReactNode
 }>) {

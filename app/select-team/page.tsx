@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -49,7 +49,7 @@ export default function SelectTeam() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
 
@@ -140,3 +140,4 @@ export default function SelectTeam() {
     </main>
   )
 }
+

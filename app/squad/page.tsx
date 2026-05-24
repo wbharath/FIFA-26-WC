@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -39,7 +39,7 @@ const PlayerCard = memo(function PlayerCard({ player }: { player: Player }) {
         <p className="font-bebas text-base leading-tight truncate">{player.name}</p>
         <p className="text-wc-muted text-xs">
           {player.position}
-          {player.number ? ` · #${player.number}` : ''}
+          {player.number ? ` Â· #${player.number}` : ''}
         </p>
         <p className="text-wc-dimmed text-xs">Age {player.age}</p>
       </div>
@@ -87,7 +87,7 @@ export default function Squad() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
       setUserId(user.id)
@@ -230,3 +230,4 @@ export default function Squad() {
     </main>
   )
 }
+

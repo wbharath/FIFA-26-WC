@@ -101,7 +101,7 @@ export default function MatchPage() {
         data: { user }
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
       setUser(user)

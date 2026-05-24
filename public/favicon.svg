@@ -1,0 +1,9 @@
+<svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#0A0A0A" stroke="#E8002D" stroke-width="3"/>
+  <polygon points="50,12 57,17 54,26 46,26 43,17" fill="#E8002D"/>
+  <polygon points="16,36 23,30 30,36 28,45 20,45" fill="#E8002D"/>
+  <polygon points="84,36 77,30 70,36 72,45 80,45" fill="#E8002D"/>
+  <polygon points="22,68 29,62 36,67 34,76 25,76" fill="#E8002D"/>
+  <polygon points="78,68 71,62 64,67 66,76 75,76" fill="#E8002D"/>
+  <text x="50" y="68" font-family="Arial Black, sans-serif" font-size="48" font-weight="900" fill="white" text-anchor="middle">K</text>
+</svg>

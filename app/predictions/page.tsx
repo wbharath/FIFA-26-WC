@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -136,7 +136,7 @@ export default function Predictions() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
 
@@ -187,7 +187,7 @@ export default function Predictions() {
           </p>
           <h1 className="font-bebas text-5xl uppercase mb-2">AI Predictions</h1>
           <p className="text-wc-muted text-sm">
-            Logistic regression model trained on 852 World Cup matches (1930–2022) · 14
+            Logistic regression model trained on 852 World Cup matches (1930â€“2022) Â· 14
             features including FIFA rankings, H2H records, confederation strength
           </p>
         </div>
@@ -225,3 +225,4 @@ export default function Predictions() {
     </main>
   )
 }
+

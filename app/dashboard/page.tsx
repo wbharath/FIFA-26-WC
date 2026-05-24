@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { createClient } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
@@ -49,7 +49,7 @@ export default function Dashboard() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
       setUser(user)
@@ -171,7 +171,7 @@ export default function Dashboard() {
                         }`}
                       >
                         {match.goals.home !== null
-                          ? `${match.goals.home} – ${match.goals.away}`
+                          ? `${match.goals.home} â€“ ${match.goals.away}`
                           : new Date(match.fixture.date).toLocaleDateString('en-GB', {
                               day: 'numeric',
                               month: 'short',
@@ -196,3 +196,4 @@ export default function Dashboard() {
     </main>
   )
 }
+

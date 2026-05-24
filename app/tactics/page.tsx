@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { ChevronDown, Search } from 'lucide-react'
 
 interface Player {
   id: number
@@ -42,6 +43,140 @@ const HOME_COLOR = '#E8002D'
 const AWAY_COLOR = '#0033A0'
 const POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker']
 
+function TeamSelect({
+  side,
+  teams,
+  value,
+  color,
+  onChange,
+}: {
+  side: 'home' | 'away'
+  teams: any[]
+  value: number | null
+  color: string
+  onChange: (id: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const selected = teams.find((t) => t.team.id === value) ?? null
+  const filtered = search
+    ? teams.filter((t) =>
+        t.team.name.toLowerCase().includes(search.toLowerCase())
+      )
+    : teams
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 10)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2.5 bg-wc-surface border text-left transition-all duration-150 hover:bg-wc-surface-2 rounded-sm"
+        style={{ borderColor: selected ? color : '#2A2A2A' }}
+      >
+        {selected ? (
+          <>
+            <img
+              src={selected.team.logo}
+              className="w-5 h-5 object-contain shrink-0"
+              loading="lazy"
+            />
+            <span className="text-xs font-semibold text-white flex-1 truncate">
+              {selected.team.name}
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-wc-dimmed flex-1">
+            {side === 'home' ? '← Home Team' : 'Away Team →'}
+          </span>
+        )}
+        <ChevronDown
+          size={13}
+          className="text-wc-muted shrink-0 transition-transform duration-150"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-wc-surface border border-wc-border shadow-2xl rounded-sm overflow-hidden">
+          {/* Search row */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-wc-border">
+            <Search size={12} className="text-wc-dimmed shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search teams..."
+              className="flex-1 bg-transparent text-white text-xs outline-none placeholder:text-wc-dimmed"
+            />
+          </div>
+
+          {/* List */}
+          <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
+            {filtered.length === 0 ? (
+              <p className="text-[11px] text-wc-dimmed text-center py-4">
+                No teams found
+              </p>
+            ) : (
+              filtered.map((t: any) => {
+                const active = value === t.team.id
+                return (
+                  <button
+                    key={t.team.id}
+                    onClick={() => {
+                      onChange(t.team.id)
+                      setOpen(false)
+                      setSearch('')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors duration-100 hover:bg-wc-surface-2"
+                    style={{
+                      background: active ? `${color}18` : undefined,
+                      borderLeft: active
+                        ? `2px solid ${color}`
+                        : '2px solid transparent',
+                    }}
+                  >
+                    <img
+                      src={t.team.logo}
+                      className="w-5 h-5 object-contain shrink-0"
+                      loading="lazy"
+                    />
+                    <span
+                      className="text-xs truncate"
+                      style={{ color: active ? 'white' : '#A0A0A0' }}
+                    >
+                      {t.team.name}
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function getDefaultX(
   side: 'home' | 'away',
   position: string,
@@ -80,7 +215,7 @@ function PlayerPanel({
   setHomeTeamId,
   setAwayTeamId,
   loadTeam,
-  togglePlayer
+  togglePlayer,
 }: PlayerPanelProps) {
   const data = side === 'home' ? homeData : awayData
   const teamId = side === 'home' ? homeTeamId : awayTeamId
@@ -88,61 +223,22 @@ function PlayerPanel({
 
   return (
     <div className="w-48 flex flex-col gap-3 shrink-0">
-      <div className="relative">
-        <select
-          value={teamId || ''}
-          onChange={(e) => {
-            const id = Number(e.target.value)
-            if (side === 'home') setHomeTeamId(id)
-            else setAwayTeamId(id)
-            if (id) loadTeam(id, side)
-          }}
-          className="appearance-none w-full bg-wc-surface border border-wc-border text-white text-xs pl-3 pr-7 py-2 focus:outline-none cursor-pointer"
-          style={{ borderColor: teamId ? color : undefined }}
-        >
-          <option value="">
-            {side === 'home' ? '← Home Team' : 'Away Team →'}
-          </option>
-          {teams.map((t: any) => (
-            <option key={t.team.id} value={t.team.id}>
-              {t.team.name}
-            </option>
-          ))}
-        </select>
-        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-          <svg
-            className="w-3 h-3 text-wc-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {data && (
-        <div className="flex items-center gap-2">
-          <img
-            src={data.team.logo}
-            className="w-6 h-6 object-contain"
-            loading="lazy"
-          />
-          <span className="text-xs font-semibold truncate">
-            {data.team.name}
-          </span>
-        </div>
-      )}
+      <TeamSelect
+        side={side}
+        teams={teams}
+        value={teamId}
+        color={color}
+        onChange={(id) => {
+          if (side === 'home') setHomeTeamId(id)
+          else setAwayTeamId(id)
+          loadTeam(id, side)
+        }}
+      />
 
       {data && (
         <div
           className="flex flex-col gap-3 overflow-y-auto"
-          style={{ maxHeight: 'calc(100vh - 280px)' }}
+          style={{ maxHeight: 'calc(100vh - 230px)' }}
         >
           {POSITIONS.map((pos) => {
             const players = data.players.filter((p) => p.position === pos)
@@ -166,7 +262,7 @@ function PlayerPanel({
                           background: isSelected ? `${color}22` : undefined,
                           borderLeft: isSelected
                             ? `2px solid ${color}`
-                            : '2px solid transparent'
+                            : '2px solid transparent',
                         }}
                       >
                         <img
@@ -224,10 +320,10 @@ export default function TacticsPage() {
   useEffect(() => {
     async function init() {
       const {
-        data: { user }
+        data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
       const res = await fetch('/api/teams')
@@ -246,7 +342,6 @@ export default function TacticsPage() {
     const res = await fetch(`/api/teams/${teamId}`)
     const data: TeamData = await res.json()
 
-    // Deduplicate players by id
     const seen = new Set<number>()
     data.players = data.players.filter((p) => {
       if (seen.has(p.id)) return false
@@ -298,7 +393,7 @@ export default function TacticsPage() {
         playerId,
         side,
         offsetX: e.clientX - rect.left - placed.x * rect.width,
-        offsetY: e.clientY - rect.top - placed.y * rect.height
+        offsetY: e.clientY - rect.top - placed.y * rect.height,
       }
     },
     [placedPlayers]
@@ -318,7 +413,7 @@ export default function TacticsPage() {
         playerId,
         side,
         offsetX: touch.clientX - rect.left - placed.x * rect.width,
-        offsetY: touch.clientY - rect.top - placed.y * rect.height
+        offsetY: touch.clientY - rect.top - placed.y * rect.height,
       }
     },
     [placedPlayers]
@@ -432,7 +527,7 @@ export default function TacticsPage() {
               aspectRatio: '105 / 68',
               background:
                 'linear-gradient(90deg, #1a5c0e 0%, #1f6b11 8.33%, #1a5c0e 8.33%, #1f6b11 16.66%, #1a5c0e 16.66%, #1f6b11 25%, #1a5c0e 25%, #1f6b11 33.33%, #1a5c0e 33.33%, #1f6b11 41.66%, #1a5c0e 41.66%, #1f6b11 50%, #1a5c0e 50%, #1f6b11 58.33%, #1a5c0e 58.33%, #1f6b11 66.66%, #1a5c0e 66.66%, #1f6b11 75%, #1a5c0e 75%, #1f6b11 83.33%, #1a5c0e 83.33%, #1f6b11 91.66%, #1a5c0e 91.66%, #1f6b11 100%)',
-              boxShadow: '0 0 0 2px rgba(255,255,255,0.1)'
+              boxShadow: '0 0 0 2px rgba(255,255,255,0.1)',
             }}
           >
             <svg
@@ -442,131 +537,29 @@ export default function TacticsPage() {
               viewBox="0 0 105 68"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <rect
-                x="0"
-                y="0"
-                width="105"
-                height="68"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <line
-                x1="52.5"
-                y1="0"
-                x2="52.5"
-                y2="68"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <circle
-                cx="52.5"
-                cy="34"
-                r="9.15"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
+              <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
               <circle cx="52.5" cy="34" r="0.5" fill="rgba(255,255,255,0.6)" />
-              <rect
-                x="0"
-                y="13.84"
-                width="16.5"
-                height="40.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="0"
-                y="24.84"
-                width="5.5"
-                height="18.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
+              <rect x="0" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
               <circle cx="11" cy="34" r="0.5" fill="rgba(255,255,255,0.6)" />
-              <path
-                d="M 16.5 24.84 A 9.15 9.15 0 0 0 16.5 43.16"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="-1"
-                y="29.84"
-                width="1"
-                height="8.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="88.5"
-                y="13.84"
-                width="16.5"
-                height="40.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="99.5"
-                y="24.84"
-                width="5.5"
-                height="18.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
+              <path d="M 16.5 24.84 A 9.15 9.15 0 0 0 16.5 43.16" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <rect x="-1" y="29.84" width="1" height="8.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
               <circle cx="94" cy="34" r="0.5" fill="rgba(255,255,255,0.6)" />
-              <path
-                d="M 88.5 24.84 A 9.15 9.15 0 0 1 88.5 43.16"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="105"
-                y="29.84"
-                width="1"
-                height="8.32"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 0 1 A 1 1 0 0 1 1 0"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 104 0 A 1 1 0 0 1 105 1"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 0 67 A 1 1 0 0 0 1 68"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 105 67 A 1 1 0 0 1 104 68"
-                fill="none"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth="0.5"
-              />
+              <path d="M 88.5 24.84 A 9.15 9.15 0 0 1 88.5 43.16" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <rect x="105" y="29.84" width="1" height="8.32" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <path d="M 0 1 A 1 1 0 0 1 1 0" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <path d="M 104 0 A 1 1 0 0 1 105 1" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <path d="M 0 67 A 1 1 0 0 0 1 68" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
+              <path d="M 105 67 A 1 1 0 0 1 104 68" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" />
             </svg>
 
             {placedPlayers.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-white/30 text-xs">
-                  Select players from the panels
-                </p>
+                <p className="text-white/30 text-xs">Select players from the panels</p>
               </div>
             )}
 
@@ -581,7 +574,7 @@ export default function TacticsPage() {
                     top: `${y * 100}%`,
                     transform: 'translate(-50%, -50%)',
                     zIndex: 10,
-                    touchAction: 'none'
+                    touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, player.id, teamSide)}
                   onTouchStart={(e) => handleTouchStart(e, player.id, teamSide)}
@@ -595,18 +588,13 @@ export default function TacticsPage() {
                         border: `2.5px solid ${color}`,
                         overflow: 'hidden',
                         background: color,
-                        boxShadow:
-                          '0 0 0 1.5px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.6)',
-                        flexShrink: 0
+                        boxShadow: '0 0 0 1.5px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.6)',
+                        flexShrink: 0,
                       }}
                     >
                       <img
                         src={player.photo}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         draggable={false}
                         onError={(e) => {
                           const el = e.target as HTMLImageElement
@@ -630,7 +618,7 @@ export default function TacticsPage() {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        lineHeight: 1.4
+                        lineHeight: 1.4,
                       }}
                     >
                       {player.name.split(' ').slice(-1)[0]}

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { memo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -55,7 +55,7 @@ const MatchRow = memo(function MatchRow({ match }: { match: any }) {
                 >
                   {match.goals.home}
                 </span>
-                <span className="text-wc-border text-xs">–</span>
+                <span className="text-wc-border text-xs">â€“</span>
                 <span
                   className={`font-bold text-sm ${
                     match.teams.away.winner ? 'text-white' : 'text-wc-muted'
@@ -150,7 +150,7 @@ export default function Fixtures() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
       await load()
@@ -440,3 +440,4 @@ export default function Fixtures() {
     </main>
   )
 }
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -68,7 +68,7 @@ export default function Community() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
 
@@ -227,7 +227,7 @@ export default function Community() {
                         <div className="flex flex-col items-center w-24 shrink-0">
                           {match.goals.home !== null ? (
                             <span className="font-bold text-sm">
-                              {match.goals.home} – {match.goals.away}
+                              {match.goals.home} â€“ {match.goals.away}
                             </span>
                           ) : (
                             <span className="text-xs text-wc-muted">
@@ -259,7 +259,7 @@ export default function Community() {
                         </div>
                       </button>
 
-                      {/* Fan pick bar — inline below row */}
+                      {/* Fan pick bar â€” inline below row */}
                       {stats && !isExpanded && (
                         <div className="px-4 pb-2.5 bg-wc-black">
                           <div className="flex w-full h-1.5 bg-wc-border overflow-hidden mb-1.5">
@@ -440,3 +440,4 @@ export default function Community() {
     </main>
   )
 }
+

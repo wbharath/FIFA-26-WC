@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -61,7 +61,7 @@ export default function Bracket() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/')
+        router.push('/login')
         return
       }
 
@@ -189,7 +189,7 @@ export default function Bracket() {
                                 </span>
                                 {isPicked && (
                                   <span className="text-wc-red text-xs font-bold uppercase">
-                                    ✓ Pick
+                                    âœ“ Pick
                                   </span>
                                 )}
                               </button>
@@ -207,3 +207,4 @@ export default function Bracket() {
     </main>
   )
 }
+
