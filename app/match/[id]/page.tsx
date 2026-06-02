@@ -28,6 +28,92 @@ interface MatchData {
 
 const POSITION_ORDER = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker']
 
+function aggregateCommunityXI(
+  xis: { players: Record<string, any>; formation: string }[],
+  squad: any[]
+): { players: Record<string, any>; formation: string } | null {
+  const FORMATION_MAP: Record<string, number[]> = {
+    '4-3-3': [4, 3, 3],
+    '4-4-2': [4, 4, 2],
+    '3-5-2': [3, 5, 2],
+    '5-3-2': [5, 3, 2],
+    '4-2-3-1': [4, 2, 3, 1]
+  }
+  const DEFAULT_FORMATION = '4-3-3'
+
+  if (!xis || xis.length === 0) return null
+
+  const playerMap: Record<number, any> = {}
+  squad.forEach((p) => {
+    playerMap[p.id] = p
+  })
+
+  const formationCount: Record<string, number> = {}
+  xis.forEach((xi) => {
+    const f = xi.formation || DEFAULT_FORMATION
+    formationCount[f] = (formationCount[f] || 0) + 1
+  })
+  const majorityFormation = Object.entries(formationCount).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+  )[0][0]
+  const formationLines =
+    FORMATION_MAP[majorityFormation] || FORMATION_MAP[DEFAULT_FORMATION]
+  // Count votes per player per position
+  const voteMap: Record<string, Record<number, number>> = {
+    Goalkeeper: {},
+    Defender: {},
+    Midfielder: {},
+    Attacker: {}
+  }
+  const roleToPosition: Record<string, string> = {
+    GK: 'Goalkeeper',
+    DEF: 'Defender',
+    MID: 'Midfielder',
+    FWD: 'Attacker'
+  }
+  xis.forEach((xi) => {
+    const players = xi.players || {}
+    Object.entries(players).forEach(([slotKey, p]: [string, any]) => {
+      if (!p?.id) return
+      const role = slotKey.split('-')[0]
+      const position = roleToPosition[role]
+      if (!position || !voteMap[position]) return
+      voteMap[position][p.id] = (voteMap[position][p.id] || 0) + 1
+    })
+  })
+
+  // Pick top N per position
+  const result: Record<string, any> = {}
+
+  // GK slot
+  const topGK = Object.entries(voteMap['Goalkeeper']).sort(
+    (a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0])
+  )[0]
+  if (topGK) result['GK-0'] = playerMap[Number(topGK[0])]
+
+  formationLines.forEach((count, lineIndex) => {
+    const role =
+      lineIndex === formationLines.length - 1
+        ? 'FWD'
+        : lineIndex === 0
+          ? 'DEF'
+          : 'MID'
+    const positionName =
+      role === 'DEF' ? 'Defender' : role === 'MID' ? 'Midfielder' : 'Attacker'
+
+    const topPlayers = Object.entries(voteMap[positionName])
+      .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
+      .slice(0, count)
+
+    topPlayers.forEach(([playerId], i) => {
+      // Match PitchXI slot format: `${role}-${lineIndex}-${i}`
+      result[`${role}-${lineIndex}-${i}`] = playerMap[Number(playerId)]
+    })
+  })
+
+  return { players: result, formation: majorityFormation }
+}
+
 function MatchSkeleton() {
   return (
     <main className="min-h-screen bg-wc-black text-white">
@@ -83,6 +169,25 @@ export default function MatchPage() {
   const [awayUserFormation, setAwayUserFormation] = useState<
     string | undefined
   >(undefined)
+  const [homeCommunityXI, setHomeCommunityXI] = useState<Record<
+    string,
+    any
+  > | null>(null)
+  const [awayCommunityXI, setAwayCommunityXI] = useState<Record<
+    string,
+    any
+  > | null>(null)
+  const [homeCommunityFormation, setHomeCommunityFormation] = useState<
+    string | undefined
+  >(undefined)
+  const [awayCommunityFormation, setAwayCommunityFormation] = useState<
+    string | undefined
+  >(undefined)
+  const [homeCommunityCount, setHomeCommunityCount] = useState(0)
+  const [awayCommunityCount, setAwayCommunityCount] = useState(0)
+  const [rawHomeXIs, setRawHomeXIs] = useState<any[]>([])
+  const [rawAwayXIs, setRawAwayXIs] = useState<any[]>([])
+  const [xiView, setXiView] = useState<'mine' | 'community'>('mine')
   const supabase = createClient()
   const router = useRouter()
   const params = useParams()
@@ -113,17 +218,14 @@ export default function MatchPage() {
       if (data) {
         await Promise.all([
           loadSquads(data.teams.home.id, data.teams.away.id),
-          loadRatings(matchId as string),
-          loadPredictedXIs(data.teams.home.id, data.teams.away.id)
+          loadRatings(matchId as string, user),
+          loadPredictedXIs(data.teams.home.id, data.teams.away.id, user)
         ])
-        // Fetch pre-generated sentiment
-
         const { data: sentimentData } = await supabase
           .from('match_sentiment')
           .select('sentiment_text')
           .eq('fixture_id', Number(matchId))
           .single()
-
         setSentiment(sentimentData?.sentiment_text ?? null)
       }
       setLoading(false)
@@ -144,22 +246,21 @@ export default function MatchPage() {
     setAwaySquad(awayData?.players || [])
   }
 
-  async function loadPredictedXIs(homeId: number, awayId: number) {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
-
+  async function loadPredictedXIs(homeId: number, awayId: number, user: any) {
     const { data: xis } = await supabase
       .from('predicted_xi')
       .select('team_id, players, formation, user_id')
       .eq('match_id', Number(matchId))
       .in('team_id', [homeId, awayId])
 
+    if (!xis) return
+
+    // My XI
     if (user) {
-      const myHomeXI = xis?.find(
+      const myHomeXI = xis.find(
         (xi) => xi.team_id === homeId && xi.user_id === user.id
       )
-      const myAwayXI = xis?.find(
+      const myAwayXI = xis.find(
         (xi) => xi.team_id === awayId && xi.user_id === user.id
       )
       if (myHomeXI) {
@@ -171,22 +272,41 @@ export default function MatchPage() {
         setAwayUserFormation(myAwayXI.formation)
       }
     }
+
+    // Community XI — aggregate all XIs per team
+    // Will be computed after squads load, store raw xis for now
+    const homeXIs = xis.filter((xi) => xi.team_id === homeId)
+    const awayXIs = xis.filter((xi) => xi.team_id === awayId)
+    setHomeCommunityCount(homeXIs.length)
+    setAwayCommunityCount(awayXIs.length)
+
+    setRawHomeXIs(homeXIs)
+    setRawAwayXIs(awayXIs)
   }
 
-  async function loadRatings(matchId: string) {
+  // Compute community XIs once squads are loaded
+  useEffect(() => {
+    if (homeSquad.length > 0 && rawHomeXIs.length > 0) {
+      const agg = aggregateCommunityXI(rawHomeXIs, homeSquad)
+      if (agg) {
+        setHomeCommunityXI(agg.players)
+        setHomeCommunityFormation(agg.formation)
+      }
+    }
+    if (awaySquad.length > 0 && rawAwayXIs.length > 0) {
+      const agg = aggregateCommunityXI(rawAwayXIs, awaySquad)
+      if (agg) {
+        setAwayCommunityXI(agg.players)
+        setAwayCommunityFormation(agg.formation)
+      }
+    }
+  }, [homeSquad, awaySquad, rawHomeXIs, rawAwayXIs])
+
+  async function loadRatings(matchId: string, user: any) {
     const { data } = await supabase
       .from('player_ratings')
-      .select('player_id, rating')
+      .select('player_id, rating, user_id')
       .eq('match_id', matchId)
-
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
-    const { data: myRatings } = await supabase
-      .from('player_ratings')
-      .select('player_id, rating')
-      .eq('match_id', matchId)
-      .eq('user_id', user?.id)
 
     const avgMap: Record<number, number> = {}
     const countMap: Record<number, number> = {}
@@ -201,36 +321,32 @@ export default function MatchPage() {
     setAvgRatings(avgMap)
 
     const myMap: Record<number, number> = {}
-    myRatings?.forEach((r) => {
+    data?.filter((r) => r.user_id === user?.id).forEach((r) => {
       myMap[r.player_id] = r.rating
     })
     setRatings(myMap)
   }
 
-  async function ratePlayer(player: any, teamId: number, rating: number) {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
+  async function ratePlayer(player: any, teamId: number, rating: number, user: any) {
     if (!user) return
-    await supabase.from('player_ratings').upsert(
-      {
-        user_id: user.id,
-        match_id: Number(matchId),
-        player_id: player.id,
-        player_name: player.name,
-        team_id: teamId,
-        rating
-      },
-      { onConflict: 'user_id,match_id,player_id' }
-    )
+    await supabase
+      .from('player_ratings')
+      .upsert(
+        {
+          user_id: user.id,
+          match_id: Number(matchId),
+          player_id: player.id,
+          player_name: player.name,
+          team_id: teamId,
+          rating
+        },
+        { onConflict: 'user_id,match_id,player_id' }
+      )
     setRatings((prev) => ({ ...prev, [player.id]: rating }))
     setAvgRatings((prev) => ({ ...prev, [player.id]: rating }))
   }
 
-  async function clearRating(playerId: number) {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
+  async function clearRating(playerId: number, user: any) {
     if (!user) return
     await supabase
       .from('player_ratings')
@@ -256,17 +372,25 @@ export default function MatchPage() {
       activeTeamRef.current === 'home'
         ? match.teams.home.id
         : match.teams.away.id
-    await supabase.from('predicted_xi').upsert(
-      {
-        user_id: user.id,
-        match_id: Number(matchId),
-        team_id: teamId,
-        formation,
-        players
-      },
-      { onConflict: 'user_id,match_id,team_id' }
-    )
-    await loadPredictedXIs(match.teams.home.id, match.teams.away.id)
+    await supabase
+      .from('predicted_xi')
+      .upsert(
+        {
+          user_id: user.id,
+          match_id: Number(matchId),
+          team_id: teamId,
+          formation,
+          players
+        },
+        { onConflict: 'user_id,match_id,team_id' }
+      )
+    if (activeTeamRef.current === 'home') {
+      setHomeUserXI(players)
+      setHomeUserFormation(formation)
+    } else {
+      setAwayUserXI(players)
+      setAwayUserFormation(formation)
+    }
     alert('XI Saved!')
   }
 
@@ -328,11 +452,14 @@ export default function MatchPage() {
   const isFinished = match?.fixture.status.short === 'FT'
   const isStarted = isLive || isFinished
   const isUpcoming = match?.fixture.status.short === 'NS'
-
   const activeSquad = activeTeam === 'home' ? homeSquad : awaySquad
+  const communityCount =
+    activeTeam === 'home' ? homeCommunityCount : awayCommunityCount
+  const communityXI = activeTeam === 'home' ? homeCommunityXI : awayCommunityXI
+  const communityFormation =
+    activeTeam === 'home' ? homeCommunityFormation : awayCommunityFormation
 
   if (loading) return <MatchSkeleton />
-
   if (!match)
     return (
       <main className="min-h-screen bg-wc-black text-white flex items-center justify-center">
@@ -359,7 +486,6 @@ export default function MatchPage() {
               </span>
               {statusBadge(match.fixture.status.short)}
             </div>
-
             <div className="flex items-center justify-between">
               <div className="flex flex-col items-center gap-2 sm:gap-3 w-2/5">
                 <img
@@ -371,7 +497,6 @@ export default function MatchPage() {
                   {match.teams.home.name}
                 </p>
               </div>
-
               <div className="flex flex-col items-center gap-2 w-1/5">
                 {match.goals.home !== null ? (
                   <>
@@ -395,27 +520,19 @@ export default function MatchPage() {
                     <p className="text-wc-muted text-sm">
                       {new Date(match.fixture.date).toLocaleDateString(
                         'en-GB',
-                        {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        }
+                        { day: 'numeric', month: 'short', year: 'numeric' }
                       )}
                     </p>
                     <p className="text-wc-dimmed text-xs">
                       {new Date(match.fixture.date).toLocaleTimeString(
                         'en-GB',
-                        {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }
+                        { hour: '2-digit', minute: '2-digit' }
                       )}{' '}
                       UTC
                     </p>
                   </>
                 )}
               </div>
-
               <div className="flex flex-col items-center gap-2 sm:gap-3 w-2/5">
                 <img
                   src={match.teams.away.logo}
@@ -430,6 +547,7 @@ export default function MatchPage() {
           </div>
         </div>
 
+        {/* Fan Buzz */}
         {sentiment !== null && (
           <div className="bg-wc-surface border border-wc-border rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -461,7 +579,7 @@ export default function MatchPage() {
           )}
 
           {/* Team toggle */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-4">
             {(['home', 'away'] as const).map((side) => {
               const team = match.teams[side]
               return (
@@ -485,8 +603,39 @@ export default function MatchPage() {
             })}
           </div>
 
-          {/* UPCOMING — PitchXI picker */}
+          {/* XI View toggle — only for upcoming */}
           {isUpcoming && (
+            <div className="flex gap-0 mb-6 border border-wc-border w-fit">
+              <button
+                onClick={() => setXiView('mine')}
+                className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-all duration-150 ${
+                  xiView === 'mine'
+                    ? 'bg-wc-red text-white'
+                    : 'text-wc-muted hover:text-white'
+                }`}
+              >
+                My Prediction
+              </button>
+              <button
+                onClick={() => setXiView('community')}
+                className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-all duration-150 border-l border-wc-border ${
+                  xiView === 'community'
+                    ? 'bg-wc-red text-white'
+                    : 'text-wc-muted hover:text-white'
+                }`}
+              >
+                Community XI
+                {communityCount > 0 && (
+                  <span className="ml-1.5 text-[10px] opacity-70">
+                    {communityCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* UPCOMING — My Prediction */}
+          {isUpcoming && xiView === 'mine' && (
             <div>
               <p className="text-sm font-semibold text-wc-muted mb-4">
                 Pick your predicted XI for{' '}
@@ -516,6 +665,52 @@ export default function MatchPage() {
             </div>
           )}
 
+          {/* UPCOMING — Community XI */}
+          {isUpcoming && xiView === 'community' && (
+            <div>
+              {communityCount === 0 || !communityXI ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-wc-muted text-sm mb-1">
+                    No predictions yet
+                  </p>
+                  <p className="text-wc-dimmed text-xs">
+                    Be the first to predict the XI for this match
+                  </p>
+                  <button
+                    onClick={() => setXiView('mine')}
+                    className="mt-4 px-4 py-2 bg-wc-red text-white text-xs font-semibold uppercase tracking-wide"
+                  >
+                    Predict Now
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-wc-muted mb-4">
+                    Based on{' '}
+                    <span className="text-white font-semibold">
+                      {communityCount}
+                    </span>{' '}
+                    fan prediction{communityCount !== 1 ? 's' : ''}
+                  </p>
+                  <PitchXI
+                    key={`community-${activeTeam}`}
+                    squad={activeSquad}
+                    teamId={
+                      activeTeam === 'home'
+                        ? match.teams.home.id
+                        : match.teams.away.id
+                    }
+                    userId={user?.id}
+                    savedFormation={communityFormation}
+                    savedXI={communityXI ?? undefined}
+                    onSave={async () => {}}
+                    readOnly
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* LIVE / FINISHED — player list with ratings */}
           {isStarted &&
             (() => {
@@ -525,7 +720,6 @@ export default function MatchPage() {
                   ? match.teams.home.id
                   : match.teams.away.id
               const grouped = groupByPosition(squad)
-
               return (
                 <div className="flex flex-col gap-6">
                   {POSITION_ORDER.map((position) => {
@@ -537,7 +731,6 @@ export default function MatchPage() {
                         : position === 'Goalkeeper'
                           ? 'Goalkeeper'
                           : position + 's'
-
                     return (
                       <div key={position}>
                         <p className="text-[11px] font-semibold text-wc-dimmed uppercase tracking-widest mb-2 pb-2 border-b border-wc-border">
@@ -582,14 +775,14 @@ export default function MatchPage() {
                                   onChange={(e) => {
                                     const val = Number(e.target.value)
                                     if (val >= 1 && val <= 10)
-                                      ratePlayer(player, teamId, val)
+                                      ratePlayer(player, teamId, val, user)
                                   }}
                                   className="w-12 bg-wc-border/30 border border-wc-border text-center text-sm text-white focus:border-wc-red focus:outline-none transition-colors"
                                   placeholder="1-10"
                                 />
                                 {ratings[player.id] && (
                                   <button
-                                    onClick={() => clearRating(player.id)}
+                                    onClick={() => clearRating(player.id, user)}
                                     className="text-wc-muted hover:text-wc-red transition-colors"
                                   >
                                     <X className="w-3 h-3" />

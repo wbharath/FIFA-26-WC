@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -159,14 +159,18 @@ export default function Fixtures() {
     init()
   }, [])
 
-  const allTeams = Array.from(
-    new Map(
-      matches.flatMap((m) => [
-        [m.teams.home.id, m.teams.home],
-        [m.teams.away.id, m.teams.away],
-      ])
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name))
+  const allTeams = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          matches.flatMap((m) => [
+            [m.teams.home.id, m.teams.home],
+            [m.teams.away.id, m.teams.away],
+          ])
+        ).values()
+      ).sort((a, b) => a.name.localeCompare(b.name)),
+    [matches]
+  )
 
   const filteredTeams = allTeams.filter((t) =>
     t.name.toLowerCase().includes(teamSearch.toLowerCase())
@@ -180,35 +184,50 @@ export default function Fixtures() {
     })
   }
 
-  const sorted = [...matches].sort(
-    (a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()
+  const sorted = useMemo(
+    () =>
+      [...matches].sort(
+        (a, b) =>
+          new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()
+      ),
+    [matches]
   )
 
-  const byDate: Record<string, any[]> = {}
-  sorted.forEach((match) => {
-    const key = new Date(match.fixture.date).toLocaleDateString('en-CA')
-    if (!byDate[key]) byDate[key] = []
-    byDate[key].push(match)
-  })
-
-  const byRoundGroup: Record<string, Record<string, any[]>> = {}
-  matches
-    .filter((m) => m.group)
-    .forEach((match) => {
-      const round = match.league.round
-      const group = match.group
-      if (!byRoundGroup[round]) byRoundGroup[round] = {}
-      if (!byRoundGroup[round][group]) byRoundGroup[round][group] = []
-      byRoundGroup[round][group].push(match)
+  const byDate = useMemo(() => {
+    const result: Record<string, any[]> = {}
+    sorted.forEach((match) => {
+      const key = new Date(match.fixture.date).toLocaleDateString('en-CA')
+      if (!result[key]) result[key] = []
+      result[key].push(match)
     })
+    return result
+  }, [sorted])
 
-  const teamMatches = selectedTeam
-    ? sorted.filter(
-        (m) =>
-          m.teams.home.id === Number(selectedTeam) ||
-          m.teams.away.id === Number(selectedTeam)
-      )
-    : []
+  const byRoundGroup = useMemo(() => {
+    const result: Record<string, Record<string, any[]>> = {}
+    matches
+      .filter((m) => m.group)
+      .forEach((match) => {
+        const round = match.league.round
+        const group = match.group
+        if (!result[round]) result[round] = {}
+        if (!result[round][group]) result[round][group] = []
+        result[round][group].push(match)
+      })
+    return result
+  }, [matches])
+
+  const teamMatches = useMemo(
+    () =>
+      selectedTeam
+        ? sorted.filter(
+            (m) =>
+              m.teams.home.id === Number(selectedTeam) ||
+              m.teams.away.id === Number(selectedTeam)
+          )
+        : [],
+    [selectedTeam, sorted]
+  )
 
   const roundLabels: Record<string, string> = {
     'Group Stage - 1': 'Round 1',

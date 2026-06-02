@@ -18,6 +18,7 @@ interface PitchXIProps {
   savedFormation?: string
   savedXI?: Record<string, Player | null>
   onSave: (formation: string, players: any) => void
+  readOnly?: boolean
 }
 
 const FORMATIONS: Record<string, number[]> = {
@@ -34,7 +35,8 @@ export default function PitchXI({
   userId,
   savedFormation,
   savedXI,
-  onSave
+  onSave,
+  readOnly = false
 }: PitchXIProps) {
   const [formation, setFormation] = useState(savedFormation || '4-3-3')
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
@@ -69,7 +71,7 @@ export default function PitchXI({
   const lineCount = FORMATIONS[formation].length + 1
 
   function pickPlayer(player: Player) {
-    if (!selectedSlot) return
+    if (!selectedSlot || readOnly) return
     setXi((prev) => ({ ...prev, [selectedSlot]: player }))
     setSelectedSlot(null)
   }
@@ -91,29 +93,42 @@ export default function PitchXI({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-        <label className="text-gray-400 text-sm">Formation:</label>
-        <select
-          value={formation}
-          onChange={(e) => {
-            setFormation(e.target.value)
-            setXi({})
-          }}
-          className="bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-1 text-sm"
-        >
-          {Object.keys(FORMATIONS).map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={() => onSave(formation, xi)}
-          className="ml-auto bg-green-600 hover:bg-green-500 text-white px-4 py-1 rounded-lg text-sm font-semibold transition"
-        >
-          Save XI
-        </button>
-      </div>
+      {/* Formation selector + Save — hidden in readOnly */}
+      {!readOnly && (
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <label className="text-gray-400 text-sm">Formation:</label>
+          <select
+            value={formation}
+            onChange={(e) => {
+              setFormation(e.target.value)
+              setXi({})
+            }}
+            className="bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-1 text-sm"
+          >
+            {Object.keys(FORMATIONS).map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => onSave(formation, xi)}
+            className="ml-auto bg-green-600 hover:bg-green-500 text-white px-4 py-1 rounded-lg text-sm font-semibold transition"
+          >
+            Save XI
+          </button>
+        </div>
+      )}
+
+      {/* Formation label in readOnly */}
+      {readOnly && (
+        <div className="flex items-center gap-2">
+          <span className="text-wc-muted text-xs uppercase tracking-widest">
+            Formation
+          </span>
+          <span className="text-white text-xs font-semibold">{formation}</span>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-stretch sm:items-start">
         {/* Pitch */}
@@ -261,12 +276,15 @@ export default function PitchXI({
                     return (
                       <button
                         key={slot.id}
-                        onClick={() =>
+                        onClick={() => {
+                          if (readOnly) return
                           setSelectedSlot(isSelected ? null : slot.id)
-                        }
+                        }}
+                        disabled={readOnly}
                         className="flex flex-col items-center gap-1 transition-transform"
                         style={{
-                          transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+                          transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                          cursor: readOnly ? 'default' : 'pointer'
                         }}
                       >
                         <div
@@ -276,7 +294,6 @@ export default function PitchXI({
                             height: 52
                           }}
                         >
-                          {/* Colored ring */}
                           <div
                             style={{
                               position: 'absolute',
@@ -306,7 +323,6 @@ export default function PitchXI({
                                   objectFit: 'cover'
                                 }}
                                 onError={(e) => {
-                                  // fallback to jersey number on broken image
                                   const el = e.target as HTMLImageElement
                                   el.style.display = 'none'
                                   const parent = el.parentElement
@@ -327,11 +343,10 @@ export default function PitchXI({
                                   color: 'rgba(255,255,255,0.5)'
                                 }}
                               >
-                                +
+                                {readOnly ? '?' : '+'}
                               </span>
                             )}
                           </div>
-                          {/* Jersey number badge */}
                           {player && player.number && (
                             <div
                               style={{
@@ -382,8 +397,8 @@ export default function PitchXI({
           </div>
         </div>
 
-        {/* Squad picker */}
-        {selectedSlot && (
+        {/* Squad picker — hidden in readOnly */}
+        {!readOnly && selectedSlot && (
           <div className="w-full sm:w-48 bg-gray-900 rounded-xl p-3 overflow-y-auto max-h-64 sm:max-h-96">
             <p className="text-gray-400 text-xs mb-3 font-semibold">
               Select {selectedSlot.split('-')[0]}

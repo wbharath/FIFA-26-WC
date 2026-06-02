@@ -76,12 +76,9 @@ export default function Dashboard() {
   }
 
   async function loadMatches(teamId: number) {
-    const res = await fetch('/api/matches')
+    const res = await fetch(`/api/matches?teamId=${teamId}`)
     const data = await res.json()
-    const teamMatches = (data.fixtures || []).filter(
-      (m: any) => m.teams.home.id === teamId || m.teams.away.id === teamId
-    )
-    setMatches(teamMatches)
+    setMatches(data.fixtures || [])
   }
 
   if (!user || !profile) return <DashboardSkeleton />

@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 
 const HEADERS = { 'x-apisports-key': process.env.APIFOOTBALL_KEY! }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const teamId = searchParams.get('teamId')
+
   const [fixturesRes, standingsRes] = await Promise.all([
     fetch('https://v3.football.api-sports.io/fixtures?league=1&season=2026', {
       headers: HEADERS,
@@ -31,11 +34,18 @@ export async function GET() {
     })
   })
 
-  const fixtures = (fixturesData.response || []).map((match: any) => ({
+  let fixtures = (fixturesData.response || []).map((match: any) => ({
     ...match,
     group:
       groupMap[match.teams.home.id] || groupMap[match.teams.away.id] || null
   }))
+
+  if (teamId) {
+    fixtures = fixtures.filter(
+      (f: any) =>
+        f.teams.home.id === Number(teamId) || f.teams.away.id === Number(teamId)
+    )
+  }
 
   return NextResponse.json({ fixtures, standingsByGroup })
 }

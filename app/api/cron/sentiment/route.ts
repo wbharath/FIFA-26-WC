@@ -72,7 +72,7 @@ export async function GET(request: Request) {
     const fixtures = data.fixtures || []
 
     const now = new Date()
-    const threeDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
 
     const upcoming = fixtures.filter((m: any) => {
       const matchDate = new Date(m.fixture.date)
@@ -85,6 +85,17 @@ export async function GET(request: Request) {
 
     console.log(`Processing ${upcoming.length} upcoming matches`)
 
+    if (upcoming.length === 0) {
+      return NextResponse.json({ success: true, processed: 0, results: [] })
+    }
+
+    // Batch-fetch all existing sentiment IDs in one query
+    const { data: existingRows } = await supabase
+      .from('match_sentiment')
+      .select('fixture_id')
+      .in('fixture_id', upcoming.map((m: any) => m.fixture.id))
+    const existingIds = new Set(existingRows?.map((r: any) => r.fixture_id) || [])
+
     const results = []
 
     for (const match of upcoming) {
@@ -92,35 +103,32 @@ export async function GET(request: Request) {
       const home = match.teams.home.name
       const away = match.teams.away.name
 
-      // Skip if already generated
-      const { data: existing } = await supabase
-        .from('match_sentiment')
-        .select('id')
-        .eq('fixture_id', fixtureId)
-        .single()
-
-      if (existing) {
+      if (existingIds.has(fixtureId)) {
         console.log(`Skipping ${home} vs ${away} — already generated`)
         continue
       }
 
-      // Fetch news and generate sentiment
-      const articles = await fetchNewsForMatch(home, away)
-      const sentiment = await generateSentiment(home, away, articles)
+      try {
+        // Fetch news and generate sentiment
+        const articles = await fetchNewsForMatch(home, away)
+        const sentiment = await generateSentiment(home, away, articles)
 
-      // Store in Supabase
-      const { error } = await supabase.from('match_sentiment').insert({
-        fixture_id: fixtureId,
-        home_team: home,
-        away_team: away,
-        sentiment_text: sentiment
-      })
+        // Store in Supabase
+        const { error } = await supabase.from('match_sentiment').insert({
+          fixture_id: fixtureId,
+          home_team: home,
+          away_team: away,
+          sentiment_text: sentiment
+        })
 
-      if (error) {
-        console.error(`Error storing sentiment for ${home} vs ${away}:`, error)
-      } else {
-        console.log(`Generated sentiment for ${home} vs ${away}`)
-        results.push({ home, away, sentiment })
+        if (error) {
+          console.error(`Error storing sentiment for ${home} vs ${away}:`, error)
+        } else {
+          console.log(`Generated sentiment for ${home} vs ${away}`)
+          results.push({ home, away, sentiment })
+        }
+      } catch (matchError) {
+        console.error(`Failed to process ${home} vs ${away}:`, matchError)
       }
 
       // Small delay to avoid rate limiting
