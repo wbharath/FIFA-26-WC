@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, memo, useRef } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, Info, Search } from 'lucide-react'
 import PitchXI from '../components/PitchXI'
 
 interface Player {
@@ -290,7 +290,14 @@ export default function Squad() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <>
+            <div className="flex items-center gap-1.5 mb-4">
+              <Info className="w-3 h-3 text-wc-muted shrink-0" />
+              <p className="text-wc-muted text-xs">
+                Squads are provisional. Official rosters will update as the tournament progresses.
+              </p>
+            </div>
+            <div className="flex flex-col gap-6">
             {Object.entries(positionGroups).map(
               ([position, players]) =>
                 players.length > 0 && (
@@ -308,7 +315,8 @@ export default function Squad() {
                   </div>
                 )
             )}
-          </div>
+            </div>
+          </>
         )}
 
         {squad.length > 0 && (

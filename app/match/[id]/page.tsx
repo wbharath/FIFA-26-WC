@@ -28,92 +28,6 @@ interface MatchData {
 
 const POSITION_ORDER = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker']
 
-function aggregateCommunityXI(
-  xis: { players: Record<string, any>; formation: string }[],
-  squad: any[]
-): { players: Record<string, any>; formation: string } | null {
-  const FORMATION_MAP: Record<string, number[]> = {
-    '4-3-3': [4, 3, 3],
-    '4-4-2': [4, 4, 2],
-    '3-5-2': [3, 5, 2],
-    '5-3-2': [5, 3, 2],
-    '4-2-3-1': [4, 2, 3, 1]
-  }
-  const DEFAULT_FORMATION = '4-3-3'
-
-  if (!xis || xis.length === 0) return null
-
-  const playerMap: Record<number, any> = {}
-  squad.forEach((p) => {
-    playerMap[p.id] = p
-  })
-
-  const formationCount: Record<string, number> = {}
-  xis.forEach((xi) => {
-    const f = xi.formation || DEFAULT_FORMATION
-    formationCount[f] = (formationCount[f] || 0) + 1
-  })
-  const majorityFormation = Object.entries(formationCount).sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
-  )[0][0]
-  const formationLines =
-    FORMATION_MAP[majorityFormation] || FORMATION_MAP[DEFAULT_FORMATION]
-  // Count votes per player per position
-  const voteMap: Record<string, Record<number, number>> = {
-    Goalkeeper: {},
-    Defender: {},
-    Midfielder: {},
-    Attacker: {}
-  }
-  const roleToPosition: Record<string, string> = {
-    GK: 'Goalkeeper',
-    DEF: 'Defender',
-    MID: 'Midfielder',
-    FWD: 'Attacker'
-  }
-  xis.forEach((xi) => {
-    const players = xi.players || {}
-    Object.entries(players).forEach(([slotKey, p]: [string, any]) => {
-      if (!p?.id) return
-      const role = slotKey.split('-')[0]
-      const position = roleToPosition[role]
-      if (!position || !voteMap[position]) return
-      voteMap[position][p.id] = (voteMap[position][p.id] || 0) + 1
-    })
-  })
-
-  // Pick top N per position
-  const result: Record<string, any> = {}
-
-  // GK slot
-  const topGK = Object.entries(voteMap['Goalkeeper']).sort(
-    (a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0])
-  )[0]
-  if (topGK) result['GK-0'] = playerMap[Number(topGK[0])]
-
-  formationLines.forEach((count, lineIndex) => {
-    const role =
-      lineIndex === formationLines.length - 1
-        ? 'FWD'
-        : lineIndex === 0
-          ? 'DEF'
-          : 'MID'
-    const positionName =
-      role === 'DEF' ? 'Defender' : role === 'MID' ? 'Midfielder' : 'Attacker'
-
-    const topPlayers = Object.entries(voteMap[positionName])
-      .sort((a, b) => b[1] - a[1] || Number(a[0]) - Number(b[0]))
-      .slice(0, count)
-
-    topPlayers.forEach(([playerId], i) => {
-      // Match PitchXI slot format: `${role}-${lineIndex}-${i}`
-      result[`${role}-${lineIndex}-${i}`] = playerMap[Number(playerId)]
-    })
-  })
-
-  return { players: result, formation: majorityFormation }
-}
-
 function MatchSkeleton() {
   return (
     <main className="min-h-screen bg-wc-black text-white">
@@ -185,8 +99,6 @@ export default function MatchPage() {
   >(undefined)
   const [homeCommunityCount, setHomeCommunityCount] = useState(0)
   const [awayCommunityCount, setAwayCommunityCount] = useState(0)
-  const [rawHomeXIs, setRawHomeXIs] = useState<any[]>([])
-  const [rawAwayXIs, setRawAwayXIs] = useState<any[]>([])
   const [xiView, setXiView] = useState<'mine' | 'community'>('mine')
   const supabase = createClient()
   const router = useRouter()
@@ -273,34 +185,32 @@ export default function MatchPage() {
       }
     }
 
-    // Community XI — aggregate all XIs per team
-    // Will be computed after squads load, store raw xis for now
+    // Community counts
     const homeXIs = xis.filter((xi) => xi.team_id === homeId)
     const awayXIs = xis.filter((xi) => xi.team_id === awayId)
     setHomeCommunityCount(homeXIs.length)
     setAwayCommunityCount(awayXIs.length)
 
-    setRawHomeXIs(homeXIs)
-    setRawAwayXIs(awayXIs)
-  }
+    // Community XI from pre-computed table
+    const { data: communityData } = await supabase
+      .from('community_xi')
+      .select('players, formation, team_id')
+      .eq('fixture_id', Number(matchId))
+      .in('team_id', [homeId, awayId])
 
-  // Compute community XIs once squads are loaded
-  useEffect(() => {
-    if (homeSquad.length > 0 && rawHomeXIs.length > 0) {
-      const agg = aggregateCommunityXI(rawHomeXIs, homeSquad)
-      if (agg) {
-        setHomeCommunityXI(agg.players)
-        setHomeCommunityFormation(agg.formation)
+    if (communityData) {
+      const homeCommunity = communityData.find((c) => c.team_id === homeId)
+      const awayCommunity = communityData.find((c) => c.team_id === awayId)
+      if (homeCommunity) {
+        setHomeCommunityXI(homeCommunity.players)
+        setHomeCommunityFormation(homeCommunity.formation)
+      }
+      if (awayCommunity) {
+        setAwayCommunityXI(awayCommunity.players)
+        setAwayCommunityFormation(awayCommunity.formation)
       }
     }
-    if (awaySquad.length > 0 && rawAwayXIs.length > 0) {
-      const agg = aggregateCommunityXI(rawAwayXIs, awaySquad)
-      if (agg) {
-        setAwayCommunityXI(agg.players)
-        setAwayCommunityFormation(agg.formation)
-      }
-    }
-  }, [homeSquad, awaySquad, rawHomeXIs, rawAwayXIs])
+  }
 
   async function loadRatings(matchId: string, user: any) {
     const { data } = await supabase
