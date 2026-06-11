@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { Star, X } from 'lucide-react'
 import PitchXI from '../../components/PitchXI'
+import LineupPitch from '../../components/LineupPitch'
 
 interface MatchData {
   fixture: {
@@ -27,6 +28,66 @@ interface MatchData {
 }
 
 const POSITION_ORDER = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker']
+
+function mapLineupToSlots(
+  startXI: any[],
+  formation: string,
+  squad: any[]
+): Record<string, any> {
+  const lines = formation.split('-').map(Number)
+  const squadMap: Record<number, any> = {}
+  squad.forEach((p: any) => { squadMap[p.id] = p })
+
+  const result: Record<string, any> = {}
+
+  const gkEntry = startXI.find((e) => e.player.pos === 'G')
+  if (gkEntry) {
+    const p = gkEntry.player
+    result['GK-0'] = {
+      id: p.id,
+      name: p.name,
+      number: p.number,
+      pos: p.pos,
+      photo:
+        squadMap[p.id]?.photo ??
+        `https://media.api-sports.io/football/players/${p.id}.png`
+    }
+  }
+
+  const outfield = startXI.filter((e) => e.player.pos !== 'G')
+  const byRow: Record<number, any[]> = {}
+  outfield.forEach((e) => {
+    const row = Number(e.player.grid?.split(':')[0] ?? 2)
+    if (!byRow[row]) byRow[row] = []
+    byRow[row].push(e)
+  })
+
+  const rows = Object.keys(byRow).map(Number).sort((a, b) => a - b)
+  rows.forEach((row, lineIndex) => {
+    if (lineIndex >= lines.length) return
+    const role =
+      lineIndex === lines.length - 1 ? 'FWD' : lineIndex === 0 ? 'DEF' : 'MID'
+    const playersInRow = byRow[row].sort(
+      (a, b) =>
+        Number(a.player.grid?.split(':')[1] ?? 1) -
+        Number(b.player.grid?.split(':')[1] ?? 1)
+    )
+    playersInRow.forEach((e, i) => {
+      const p = e.player
+      result[`${role}-${lineIndex}-${i}`] = {
+        id: p.id,
+        name: p.name,
+        number: p.number,
+        pos: p.pos,
+        photo:
+          squadMap[p.id]?.photo ??
+          `https://media.api-sports.io/football/players/${p.id}.png`
+      }
+    })
+  })
+
+  return result
+}
 
 function MatchSkeleton() {
   return (
@@ -100,6 +161,12 @@ export default function MatchPage() {
   const [homeCommunityCount, setHomeCommunityCount] = useState(0)
   const [awayCommunityCount, setAwayCommunityCount] = useState(0)
   const [xiView, setXiView] = useState<'mine' | 'community'>('mine')
+  const [homeLineup, setHomeLineup] = useState<any>(null)
+  const [awayLineup, setAwayLineup] = useState<any>(null)
+  const [lineupsAvailable, setLineupsAvailable] = useState(false)
+  const [subEvents, setSubEvents] = useState<any[]>([])
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   const params = useParams()
@@ -131,7 +198,8 @@ export default function MatchPage() {
         await Promise.all([
           loadSquads(data.teams.home.id, data.teams.away.id),
           loadRatings(matchId as string, user),
-          loadPredictedXIs(data.teams.home.id, data.teams.away.id, user)
+          loadPredictedXIs(data.teams.home.id, data.teams.away.id, user),
+          loadLineups()
         ])
         const { data: sentimentData } = await supabase
           .from('match_sentiment')
@@ -156,6 +224,23 @@ export default function MatchPage() {
     ])
     setHomeSquad(homeData?.players || [])
     setAwaySquad(awayData?.players || [])
+  }
+
+  async function loadLineups() {
+    const [lineupRes, eventsRes] = await Promise.all([
+      fetch(`/api/lineups/${matchId}`),
+      fetch(`/api/events/${matchId}`)
+    ])
+    const [lineupData, eventsData] = await Promise.all([
+      lineupRes.json(),
+      eventsRes.json()
+    ])
+    if (lineupData?.home?.startXI?.length > 0) {
+      setHomeLineup(lineupData.home)
+      setAwayLineup(lineupData.away)
+      setLineupsAvailable(true)
+    }
+    setSubEvents(eventsData || [])
   }
 
   async function loadPredictedXIs(homeId: number, awayId: number, user: any) {
@@ -304,6 +389,31 @@ export default function MatchPage() {
     alert('XI Saved!')
   }
 
+  function resolvePhoto(playerId: number, teamSide: 'home' | 'away'): string {
+    const squad = teamSide === 'home' ? homeSquad : awaySquad
+    const found = squad.find((p: any) => p.id === playerId)
+    return (
+      found?.photo ??
+      `https://media.api-sports.io/football/players/${playerId}.png`
+    )
+  }
+
+  function getSubOff(playerId: number, teamId: number) {
+    return subEvents.find(
+      (e) => e.team.id === teamId && e.assist?.id === playerId
+    )
+  }
+
+  function getSubOn(playerId: number, teamId: number) {
+    return subEvents.find(
+      (e) => e.team.id === teamId && e.player?.id === playerId
+    )
+  }
+
+  function isSubbedOff(playerId: number, teamId: number): boolean {
+    return !!getSubOff(playerId, teamId)
+  }
+
   function statusBadge(short: string) {
     switch (short) {
       case 'FT':
@@ -363,6 +473,7 @@ export default function MatchPage() {
   const isStarted = isLive || isFinished
   const isUpcoming = match?.fixture.status.short === 'NS'
   const activeSquad = activeTeam === 'home' ? homeSquad : awaySquad
+  const activeLineup = activeTeam === 'home' ? homeLineup : awayLineup
   const communityCount =
     activeTeam === 'home' ? homeCommunityCount : awayCommunityCount
   const communityXI = activeTeam === 'home' ? homeCommunityXI : awayCommunityXI
@@ -376,6 +487,9 @@ export default function MatchPage() {
         <p className="text-wc-muted">Match not found</p>
       </main>
     )
+
+  const activeTeamId =
+    activeTeam === 'home' ? match.teams.home.id : match.teams.away.id
 
   return (
     <main className="min-h-screen bg-wc-black text-white">
@@ -410,11 +524,17 @@ export default function MatchPage() {
               <div className="flex flex-col items-center gap-2 w-1/5">
                 {match.goals.home !== null ? (
                   <>
-                    <p className="font-sans font-black text-3xl sm:text-6xl leading-none tracking-tight">
-                      {match.goals.home}
-                      <span className="text-wc-dimmed mx-2 font-light">–</span>
-                      {match.goals.away}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-sans font-black text-3xl sm:text-6xl leading-none">
+                        {match.goals.home}
+                      </span>
+                      <span className="text-wc-dimmed text-2xl sm:text-5xl font-light leading-none">
+                        –
+                      </span>
+                      <span className="font-sans font-black text-3xl sm:text-6xl leading-none">
+                        {match.goals.away}
+                      </span>
+                    </div>
                     {match.score.halftime.home !== null && (
                       <p className="text-wc-dimmed text-xs">
                         HT: {match.score.halftime.home} –{' '}
@@ -479,10 +599,17 @@ export default function MatchPage() {
 
         {/* Lineups section */}
         <div className="bg-wc-surface border border-wc-border p-6">
-          <h2 className="font-bebas text-2xl uppercase mb-1">
-            {isUpcoming ? 'Predicted Lineups' : 'Lineups'}
-          </h2>
-          {isUpcoming && (
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="font-bebas text-2xl uppercase">
+              {isUpcoming && !lineupsAvailable ? 'Predicted Lineups' : 'Lineups'}
+            </h2>
+            {lineupsAvailable && (
+              <span className="bg-wc-green text-wc-black text-xs font-bold px-2 py-0.5 rounded uppercase">
+                Official
+              </span>
+            )}
+          </div>
+          {isUpcoming && !lineupsAvailable && (
             <p className="text-wc-dimmed text-xs mb-5">
               Official lineups will replace these once announced
             </p>
@@ -513,8 +640,8 @@ export default function MatchPage() {
             })}
           </div>
 
-          {/* XI View toggle — only for upcoming */}
-          {isUpcoming && (
+          {/* XI View toggle — only for upcoming without official lineups */}
+          {isUpcoming && !lineupsAvailable && (
             <div className="flex gap-0 mb-6 border border-wc-border w-fit">
               <button
                 onClick={() => setXiView('mine')}
@@ -545,7 +672,7 @@ export default function MatchPage() {
           )}
 
           {/* UPCOMING — My Prediction */}
-          {isUpcoming && xiView === 'mine' && (
+          {isUpcoming && !lineupsAvailable && xiView === 'mine' && (
             <div>
               <p className="text-sm font-semibold text-wc-muted mb-4">
                 Pick your predicted XI for{' '}
@@ -576,7 +703,7 @@ export default function MatchPage() {
           )}
 
           {/* UPCOMING — Community XI */}
-          {isUpcoming && xiView === 'community' && (
+          {isUpcoming && !lineupsAvailable && xiView === 'community' && (
             <div>
               {communityCount === 0 || !communityXI ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -621,8 +748,100 @@ export default function MatchPage() {
             </div>
           )}
 
-          {/* LIVE / FINISHED — player list with ratings */}
-          {isStarted &&
+          {/* OFFICIAL LINEUPS — when released (any match status) */}
+          {lineupsAvailable && activeLineup && (() => {
+            const slots = mapLineupToSlots(
+              activeLineup.startXI,
+              activeLineup.formation,
+              activeSquad
+            )
+            const subbedOffIds = activeLineup.startXI
+              .map((e: any) => e.player.id)
+              .filter((id: number) => isSubbedOff(id, activeTeamId))
+            const subbedOnIds = activeLineup.substitutes
+              .map((e: any) => e.player.id)
+              .filter((id: number) => !!getSubOn(id, activeTeamId))
+
+            return (
+              <div className="flex flex-col gap-6">
+                <LineupPitch
+                  key={`official-${activeTeam}`}
+                  slots={slots}
+                  formation={activeLineup.formation}
+                  subbedOffIds={subbedOffIds}
+                  subbedOnIds={subbedOnIds}
+                  ratings={ratings}
+                  onPlayerClick={(player) => {
+                    const subOff = getSubOff(player.id, activeTeamId)
+                    const subOn = getSubOn(player.id, activeTeamId)
+                    setSelectedPlayer({
+                      ...player,
+                      subOff: subOff || null,
+                      subOn: subOn || null
+                    })
+                    setShowPlayerModal(true)
+                  }}
+                />
+
+                {/* Substitutes bench */}
+                <div>
+                  <p className="text-[11px] font-semibold text-wc-dimmed uppercase tracking-widest mb-2 pb-2 border-b border-wc-border">
+                    Substitutes
+                  </p>
+                  <div>
+                    {activeLineup.substitutes.map((s: any) => {
+                      const subOnEvent = getSubOn(s.player.id, activeTeamId)
+                      const photo = resolvePhoto(s.player.id, activeTeam)
+                      return (
+                        <div
+                          key={s.player.id}
+                          className="flex items-center gap-3 px-3 py-2.5 border-b border-wc-border/50 hover:bg-wc-surface-2 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedPlayer({
+                              ...s.player,
+                              photo,
+                              subOn: subOnEvent || null,
+                              subOff: null
+                            })
+                            setShowPlayerModal(true)
+                          }}
+                        >
+                          <span className="text-wc-dimmed text-xs font-bold w-5 text-center shrink-0">
+                            {s.player.number ?? '—'}
+                          </span>
+                          <img
+                            src={photo}
+                            className="w-8 h-8 rounded-full object-cover bg-wc-border shrink-0"
+                            loading="lazy"
+                            onError={(e) => {
+                              ;(e.target as HTMLImageElement).style.display =
+                                'none'
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {s.player.name}
+                            </p>
+                            <p className="text-wc-muted text-xs">
+                              {s.player.pos}
+                            </p>
+                          </div>
+                          {subOnEvent && (
+                            <span className="text-wc-green text-xs font-bold shrink-0">
+                              ↕ {subOnEvent.time.elapsed}&apos;
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* LIVE / FINISHED — squad list with ratings (no official lineups) */}
+          {isStarted && !lineupsAvailable &&
             (() => {
               const squad = activeTeam === 'home' ? homeSquad : awaySquad
               const teamId =
@@ -710,6 +929,96 @@ export default function MatchPage() {
             })()}
         </div>
       </div>
+
+      {/* Player modal */}
+      {showPlayerModal && selectedPlayer && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPlayerModal(false)}
+        >
+          <div
+            className="bg-wc-surface border border-wc-border rounded-xl p-6 w-full max-w-sm relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowPlayerModal(false)}
+              className="absolute top-4 right-4 text-wc-muted hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-6">
+              <img
+                src={selectedPlayer.photo}
+                className="w-16 h-16 rounded-full object-cover bg-wc-border"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).src =
+                    `https://media.api-sports.io/football/players/${selectedPlayer.id}.png`
+                }}
+              />
+              <div>
+                <p className="font-bebas text-2xl">{selectedPlayer.name}</p>
+                <p className="text-wc-muted text-sm">
+                  #{selectedPlayer.number} · {selectedPlayer.pos}
+                </p>
+                {selectedPlayer.subOff && (
+                  <p className="text-wc-red text-xs mt-1">
+                    ↕ Replaced by {selectedPlayer.subOff.player.name}{' '}
+                    {selectedPlayer.subOff.time.elapsed}&apos;
+                  </p>
+                )}
+                {selectedPlayer.subOn && (
+                  <p className="text-wc-green text-xs mt-1">
+                    ↕ Replaced {selectedPlayer.subOn.assist.name}{' '}
+                    {selectedPlayer.subOn.time.elapsed}&apos;
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-wc-border pt-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-wc-muted mb-3">
+                Your Rating
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={ratings[selectedPlayer.id] || ''}
+                  onChange={(e) => {
+                    const val = Number(e.target.value)
+                    if (val >= 1 && val <= 10) {
+                      ratePlayer(selectedPlayer, activeTeamId, val, user)
+                    }
+                  }}
+                  className="w-16 bg-wc-border/30 border border-wc-border text-center text-lg text-white focus:border-wc-red focus:outline-none transition-colors"
+                  placeholder="1-10"
+                />
+                {ratings[selectedPlayer.id] && (
+                  <span className="flex items-center gap-1 text-yellow-400 text-sm font-bold">
+                    <Star className="w-4 h-4 fill-yellow-400" />
+                    {ratings[selectedPlayer.id]}
+                  </span>
+                )}
+                {avgRatings[selectedPlayer.id] && (
+                  <span className="text-wc-muted text-xs">
+                    Community: {avgRatings[selectedPlayer.id]}
+                  </span>
+                )}
+                {ratings[selectedPlayer.id] && (
+                  <button
+                    onClick={() => clearRating(selectedPlayer.id, user)}
+                    className="text-wc-muted hover:text-wc-red transition-colors ml-auto"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
