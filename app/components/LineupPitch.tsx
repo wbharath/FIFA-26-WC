@@ -7,6 +7,9 @@ interface LineupPitchProps {
   subbedOnIds: number[]
   onPlayerClick: (player: any) => void
   ratings?: Record<number, number>
+  goals?: Record<number, any[]>
+  ownGoals?: Record<number, any[]>
+  assists?: Record<number, any[]>
 }
 
 const posHex: Record<string, string> = {
@@ -41,7 +44,10 @@ export default function LineupPitch({
   subbedOffIds,
   subbedOnIds,
   onPlayerClick,
-  ratings = {}
+  ratings = {},
+  goals = {},
+  ownGoals = {},
+  assists = {}
 }: LineupPitchProps) {
   const slots = getSlots(formation)
   const lineCount = formation.split('-').map(Number).length + 1
@@ -229,6 +235,74 @@ export default function LineupPitch({
                             {ratings[player.id] ?? 0}
                           </div>
                         ) : null}
+
+                        {/* Bottom-left: goal / OG / assist indicators */}
+                        {player && (() => {
+                          const gc = goals[player.id]?.length ?? 0
+                          const ogc = ownGoals[player.id]?.length ?? 0
+                          const ac = assists[player.id]?.length ?? 0
+                          if (gc === 0 && ogc === 0 && ac === 0) return null
+                          return (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: -2,
+                                left: -2,
+                                display: 'flex',
+                                gap: 2
+                              }}
+                            >
+                              {gc > 0 && (
+                                <div
+                                  style={{
+                                    background: 'rgba(255,255,255,0.92)',
+                                    borderRadius: 3,
+                                    padding: '1px 2px',
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    color: '#111',
+                                    border: '1px solid rgba(0,0,0,0.25)',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  ⚽{gc > 1 ? gc : ''}
+                                </div>
+                              )}
+                              {ogc > 0 && (
+                                <div
+                                  style={{
+                                    background: '#E8002D',
+                                    borderRadius: 3,
+                                    padding: '1px 2px',
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    color: 'white',
+                                    border: '1px solid rgba(0,0,0,0.25)',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  ⚽
+                                </div>
+                              )}
+                              {ac > 0 && (
+                                <div
+                                  style={{
+                                    background: '#0033A0',
+                                    borderRadius: 3,
+                                    padding: '1px 2px',
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    color: 'white',
+                                    border: '1px solid rgba(0,0,0,0.25)',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  A{ac > 1 ? ac : ''}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       <span

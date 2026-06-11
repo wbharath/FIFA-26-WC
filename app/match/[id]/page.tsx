@@ -164,7 +164,7 @@ export default function MatchPage() {
   const [homeLineup, setHomeLineup] = useState<any>(null)
   const [awayLineup, setAwayLineup] = useState<any>(null)
   const [lineupsAvailable, setLineupsAvailable] = useState(false)
-  const [subEvents, setSubEvents] = useState<any[]>([])
+  const [matchEvents, setMatchEvents] = useState<any[]>([])
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
   const supabase = createClient()
@@ -240,7 +240,7 @@ export default function MatchPage() {
       setAwayLineup(lineupData.away)
       setLineupsAvailable(true)
     }
-    setSubEvents(eventsData || [])
+    setMatchEvents(eventsData || [])
   }
 
   async function loadPredictedXIs(homeId: number, awayId: number, user: any) {
@@ -399,19 +399,52 @@ export default function MatchPage() {
   }
 
   function getSubOff(playerId: number, teamId: number) {
-    return subEvents.find(
-      (e) => e.team.id === teamId && e.assist?.id === playerId
+    return matchEvents.find(
+      (e) =>
+        e.type === 'subst' &&
+        e.team.id === teamId &&
+        e.assist?.id === playerId
     )
   }
 
   function getSubOn(playerId: number, teamId: number) {
-    return subEvents.find(
-      (e) => e.team.id === teamId && e.player?.id === playerId
+    return matchEvents.find(
+      (e) =>
+        e.type === 'subst' &&
+        e.team.id === teamId &&
+        e.player?.id === playerId
     )
   }
 
   function isSubbedOff(playerId: number, teamId: number): boolean {
     return !!getSubOff(playerId, teamId)
+  }
+
+  function getPlayerGoals(playerId: number) {
+    return matchEvents.filter(
+      (e) =>
+        e.type === 'Goal' &&
+        e.player?.id === playerId &&
+        e.detail !== 'Own Goal'
+    )
+  }
+
+  function getPlayerOwnGoals(playerId: number) {
+    return matchEvents.filter(
+      (e) =>
+        e.type === 'Goal' &&
+        e.player?.id === playerId &&
+        e.detail === 'Own Goal'
+    )
+  }
+
+  function getPlayerAssists(playerId: number) {
+    return matchEvents.filter(
+      (e) =>
+        e.type === 'Goal' &&
+        e.assist?.id === playerId &&
+        e.detail !== 'Own Goal'
+    )
   }
 
   function statusBadge(short: string) {
@@ -762,6 +795,29 @@ export default function MatchPage() {
               .map((e: any) => e.player.id)
               .filter((id: number) => !!getSubOn(id, activeTeamId))
 
+            // Build goal/assist maps from matchEvents for pitch display
+            const goalMap: Record<number, any[]> = {}
+            const ownGoalMap: Record<number, any[]> = {}
+            const assistMap: Record<number, any[]> = {}
+            matchEvents.forEach((e: any) => {
+              if (e.type !== 'Goal') return
+              const pid = e.player?.id
+              if (pid) {
+                if (e.detail === 'Own Goal') {
+                  if (!ownGoalMap[pid]) ownGoalMap[pid] = []
+                  ownGoalMap[pid].push(e)
+                } else {
+                  if (!goalMap[pid]) goalMap[pid] = []
+                  goalMap[pid].push(e)
+                }
+              }
+              const aid = e.assist?.id
+              if (aid && e.detail !== 'Own Goal') {
+                if (!assistMap[aid]) assistMap[aid] = []
+                assistMap[aid].push(e)
+              }
+            })
+
             return (
               <div className="flex flex-col gap-6">
                 <LineupPitch
@@ -771,6 +827,9 @@ export default function MatchPage() {
                   subbedOffIds={subbedOffIds}
                   subbedOnIds={subbedOnIds}
                   ratings={ratings}
+                  goals={goalMap}
+                  ownGoals={ownGoalMap}
+                  assists={assistMap}
                   onPlayerClick={(player) => {
                     const subOff = getSubOff(player.id, activeTeamId)
                     const subOn = getSubOn(player.id, activeTeamId)
@@ -973,6 +1032,24 @@ export default function MatchPage() {
                     {selectedPlayer.subOn.time.elapsed}&apos;
                   </p>
                 )}
+                {getPlayerGoals(selectedPlayer.id).map((g: any, i: number) => (
+                  <p key={`g${i}`} className="text-white text-xs mt-1">
+                    ⚽ {g.time.elapsed}&apos;
+                    {g.detail === 'Penalty' && (
+                      <span className="text-wc-muted"> (P)</span>
+                    )}
+                  </p>
+                ))}
+                {getPlayerOwnGoals(selectedPlayer.id).map((g: any, i: number) => (
+                  <p key={`og${i}`} className="text-wc-red text-xs mt-1">
+                    ⚽ OG {g.time.elapsed}&apos;
+                  </p>
+                ))}
+                {getPlayerAssists(selectedPlayer.id).map((a: any, i: number) => (
+                  <p key={`a${i}`} className="text-wc-muted text-xs mt-1">
+                    A {a.time.elapsed}&apos;
+                  </p>
+                ))}
               </div>
             </div>
 
