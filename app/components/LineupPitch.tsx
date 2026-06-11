@@ -38,6 +38,26 @@ function getSlots(formation: string) {
   return slots
 }
 
+function ratingPillColor(val: number): string {
+  if (val >= 7) return '#00A550'
+  if (val >= 6) return '#eab308'
+  return '#ef4444'
+}
+
+const badgeBase: React.CSSProperties = {
+  borderRadius: '50%',
+  width: 15,
+  height: 15,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 8,
+  fontWeight: 800,
+  lineHeight: 1,
+  border: '1.5px solid rgba(0,0,0,0.35)',
+  flexShrink: 0
+}
+
 export default function LineupPitch({
   slots: slotData,
   formation,
@@ -139,6 +159,12 @@ export default function LineupPitch({
                   const subbedOff = player && subbedOffIds.includes(player.id)
                   const subbedOn = player && subbedOnIds.includes(player.id)
                   const ringColor = posHex[slot.role] ?? '#6b7280'
+                  const ratingVal = player ? ratings[player.id] : undefined
+                  const gc = player ? (goals[player.id]?.length ?? 0) : 0
+                  const ogc = player ? (ownGoals[player.id]?.length ?? 0) : 0
+                  const ac = player ? (assists[player.id]?.length ?? 0) : 0
+                  const hasEventBadge =
+                    !!player && (subbedOff || subbedOn || gc > 0 || ogc > 0 || ac > 0)
 
                   return (
                     <button
@@ -146,17 +172,20 @@ export default function LineupPitch({
                       onClick={() => player && onPlayerClick(player)}
                       className="flex flex-col items-center gap-1 transition-transform hover:scale-105"
                       style={{
-                        opacity: subbedOff ? 0.4 : 1,
+                        opacity: subbedOff ? 0.5 : 1,
                         cursor: player ? 'pointer' : 'default'
                       }}
                     >
-                      <div style={{ position: 'relative', width: 44, height: 52 }}>
+                      {/* Avatar circle */}
+                      <div style={{ position: 'relative', width: 44, height: 44 }}>
                         <div
                           style={{
                             position: 'absolute',
                             inset: 0,
                             borderRadius: '50%',
-                            background: player ? ringColor : 'rgba(255,255,255,0.18)',
+                            background: player
+                              ? ringColor
+                              : 'rgba(255,255,255,0.18)',
                             border: '2px solid rgba(255,255,255,0.45)',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
                             overflow: 'hidden',
@@ -168,7 +197,11 @@ export default function LineupPitch({
                           {player ? (
                             <img
                               src={player.photo}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
                               onError={(e) => {
                                 const el = e.target as HTMLImageElement
                                 el.style.display = 'none'
@@ -182,129 +215,74 @@ export default function LineupPitch({
                               }}
                             />
                           ) : (
-                            <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }}>
+                            <span
+                              style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }}
+                            >
                               ?
                             </span>
                           )}
                         </div>
 
-                        {/* Sub badge takes priority; otherwise rating badge (0 until user rates) */}
-                        {player && (subbedOff || subbedOn) ? (
+                        {/* Event badges — all bottom-right, row layout */}
+                        {hasEventBadge && (
                           <div
                             style={{
                               position: 'absolute',
-                              bottom: -2,
-                              right: -2,
-                              background: subbedOff ? '#E8002D' : '#00A550',
-                              borderRadius: '50%',
-                              width: 18,
-                              height: 18,
+                              bottom: -3,
+                              right: -3,
                               display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: 'white',
-                              border: '1.5px solid rgba(0,0,0,0.4)',
+                              flexDirection: 'row',
+                              gap: 1,
                               zIndex: 1
                             }}
                           >
-                            ↕
+                            {(subbedOff || subbedOn) && (
+                              <div
+                                style={{
+                                  ...badgeBase,
+                                  background: subbedOff ? '#E8002D' : '#00A550',
+                                  color: 'white'
+                                }}
+                              >
+                                {subbedOff ? '↓' : '↑'}
+                              </div>
+                            )}
+                            {gc > 0 && (
+                              <div
+                                style={{
+                                  ...badgeBase,
+                                  background: 'rgba(255,255,255,0.92)'
+                                }}
+                              >
+                                ⚽
+                              </div>
+                            )}
+                            {ogc > 0 && (
+                              <div
+                                style={{
+                                  ...badgeBase,
+                                  background: '#E8002D'
+                                }}
+                              >
+                                ⚽
+                              </div>
+                            )}
+                            {ac > 0 && (
+                              <div
+                                style={{
+                                  ...badgeBase,
+                                  background: '#0033A0',
+                                  color: 'white'
+                                }}
+                              >
+                                A
+                              </div>
+                            )}
                           </div>
-                        ) : player ? (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              bottom: -2,
-                              right: -2,
-                              background: ratings[player.id]
-                                ? '#eab308'
-                                : 'rgba(60,60,60,0.9)',
-                              borderRadius: '50%',
-                              width: 18,
-                              height: 18,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: 'white',
-                              border: '1.5px solid rgba(0,0,0,0.4)'
-                            }}
-                          >
-                            {ratings[player.id] ?? 0}
-                          </div>
-                        ) : null}
-
-                        {/* Bottom-left: goal / OG / assist indicators */}
-                        {player && (() => {
-                          const gc = goals[player.id]?.length ?? 0
-                          const ogc = ownGoals[player.id]?.length ?? 0
-                          const ac = assists[player.id]?.length ?? 0
-                          if (gc === 0 && ogc === 0 && ac === 0) return null
-                          return (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                bottom: -2,
-                                left: -2,
-                                display: 'flex',
-                                gap: 2
-                              }}
-                            >
-                              {gc > 0 && (
-                                <div
-                                  style={{
-                                    background: 'rgba(255,255,255,0.92)',
-                                    borderRadius: 3,
-                                    padding: '1px 2px',
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    color: '#111',
-                                    border: '1px solid rgba(0,0,0,0.25)',
-                                    lineHeight: 1.2
-                                  }}
-                                >
-                                  ⚽{gc > 1 ? gc : ''}
-                                </div>
-                              )}
-                              {ogc > 0 && (
-                                <div
-                                  style={{
-                                    background: '#E8002D',
-                                    borderRadius: 3,
-                                    padding: '1px 2px',
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    color: 'white',
-                                    border: '1px solid rgba(0,0,0,0.25)',
-                                    lineHeight: 1.2
-                                  }}
-                                >
-                                  ⚽
-                                </div>
-                              )}
-                              {ac > 0 && (
-                                <div
-                                  style={{
-                                    background: '#0033A0',
-                                    borderRadius: 3,
-                                    padding: '1px 2px',
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    color: 'white',
-                                    border: '1px solid rgba(0,0,0,0.25)',
-                                    lineHeight: 1.2
-                                  }}
-                                >
-                                  A{ac > 1 ? ac : ''}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
+                        )}
                       </div>
 
+                      {/* Player name */}
                       <span
                         style={{
                           color: subbedOff ? '#A0A0A0' : 'white',
@@ -321,6 +299,26 @@ export default function LineupPitch({
                       >
                         {player ? player.name.split(' ').slice(-1)[0] : slot.role}
                       </span>
+
+                      {/* Rating pill (SofaScore style) — only shown when rated */}
+                      {player && ratingVal !== undefined && (
+                        <div
+                          style={{
+                            background: ratingPillColor(ratingVal),
+                            borderRadius: 3,
+                            padding: '0px 5px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: 'white',
+                            lineHeight: '14px',
+                            minWidth: 22,
+                            textAlign: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                          }}
+                        >
+                          {ratingVal}
+                        </div>
+                      )}
                     </button>
                   )
                 })}

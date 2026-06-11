@@ -1006,51 +1006,104 @@ export default function MatchPage() {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-4 mb-6">
-              <img
-                src={selectedPlayer.photo}
-                className="w-16 h-16 rounded-full object-cover bg-wc-border"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).src =
-                    `https://media.api-sports.io/football/players/${selectedPlayer.id}.png`
-                }}
-              />
-              <div>
-                <p className="font-bebas text-2xl">{selectedPlayer.name}</p>
-                <p className="text-wc-muted text-sm">
-                  #{selectedPlayer.number} · {selectedPlayer.pos}
-                </p>
-                {selectedPlayer.subOff && (
-                  <p className="text-wc-red text-xs mt-1">
-                    ↕ Replaced by {selectedPlayer.subOff.player.name}{' '}
-                    {selectedPlayer.subOff.time.elapsed}&apos;
+            <div className="mb-6">
+              {/* Player info */}
+              <div className="flex items-center gap-4">
+                <img
+                  src={selectedPlayer.photo}
+                  className="w-16 h-16 rounded-full object-cover bg-wc-border shrink-0"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src =
+                      `https://media.api-sports.io/football/players/${selectedPlayer.id}.png`
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bebas text-2xl leading-tight">
+                    {selectedPlayer.name}
                   </p>
-                )}
-                {selectedPlayer.subOn && (
-                  <p className="text-wc-green text-xs mt-1">
-                    ↕ Replaced {selectedPlayer.subOn.assist.name}{' '}
-                    {selectedPlayer.subOn.time.elapsed}&apos;
+                  <p className="text-wc-muted text-sm">
+                    #{selectedPlayer.number} · {selectedPlayer.pos}
                   </p>
-                )}
-                {getPlayerGoals(selectedPlayer.id).map((g: any, i: number) => (
-                  <p key={`g${i}`} className="text-white text-xs mt-1">
-                    ⚽ {g.time.elapsed}&apos;
-                    {g.detail === 'Penalty' && (
-                      <span className="text-wc-muted"> (P)</span>
-                    )}
-                  </p>
-                ))}
-                {getPlayerOwnGoals(selectedPlayer.id).map((g: any, i: number) => (
-                  <p key={`og${i}`} className="text-wc-red text-xs mt-1">
-                    ⚽ OG {g.time.elapsed}&apos;
-                  </p>
-                ))}
-                {getPlayerAssists(selectedPlayer.id).map((a: any, i: number) => (
-                  <p key={`a${i}`} className="text-wc-muted text-xs mt-1">
-                    A {a.time.elapsed}&apos;
-                  </p>
-                ))}
+                  {getPlayerGoals(selectedPlayer.id).map((g: any, i: number) => (
+                    <p key={`g${i}`} className="text-white text-xs mt-1">
+                      ⚽ {g.time.elapsed}&apos;
+                      {g.detail === 'Penalty' && (
+                        <span className="text-wc-muted"> (P)</span>
+                      )}
+                    </p>
+                  ))}
+                  {getPlayerOwnGoals(selectedPlayer.id).map(
+                    (g: any, i: number) => (
+                      <p key={`og${i}`} className="text-wc-red text-xs mt-1">
+                        ⚽ OG {g.time.elapsed}&apos;
+                      </p>
+                    )
+                  )}
+                  {getPlayerAssists(selectedPlayer.id).map(
+                    (a: any, i: number) => (
+                      <p key={`a${i}`} className="text-wc-muted text-xs mt-1">
+                        A {a.time.elapsed}&apos;
+                      </p>
+                    )
+                  )}
+                </div>
               </div>
+
+              {/* Substitution row with replacement player photo */}
+              {selectedPlayer.subOff && (
+                <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-black/25 border border-wc-border/50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-wc-red text-[10px] font-bold uppercase tracking-widest">
+                      Substituted Off
+                    </p>
+                    <p className="text-white text-sm mt-0.5">
+                      {selectedPlayer.subOff.player.name}{' '}
+                      <span className="text-wc-muted">
+                        {selectedPlayer.subOff.time.elapsed}&apos;
+                      </span>
+                    </p>
+                  </div>
+                  <img
+                    src={resolvePhoto(
+                      selectedPlayer.subOff.player.id,
+                      activeTeam
+                    )}
+                    className="w-12 h-12 rounded-full object-cover bg-wc-border shrink-0"
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).src =
+                        `https://media.api-sports.io/football/players/${selectedPlayer.subOff.player.id}.png`
+                    }}
+                  />
+                </div>
+              )}
+              {selectedPlayer.subOn && (
+                <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-black/25 border border-wc-border/50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-wc-green text-[10px] font-bold uppercase tracking-widest">
+                      Came On
+                    </p>
+                    <p className="text-white text-sm mt-0.5">
+                      for {selectedPlayer.subOn.assist?.name}{' '}
+                      <span className="text-wc-muted">
+                        {selectedPlayer.subOn.time.elapsed}&apos;
+                      </span>
+                    </p>
+                  </div>
+                  {selectedPlayer.subOn.assist?.id && (
+                    <img
+                      src={resolvePhoto(
+                        selectedPlayer.subOn.assist.id,
+                        activeTeam
+                      )}
+                      className="w-12 h-12 rounded-full object-cover bg-wc-border shrink-0"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).src =
+                          `https://media.api-sports.io/football/players/${selectedPlayer.subOn.assist.id}.png`
+                      }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-wc-border pt-4">
