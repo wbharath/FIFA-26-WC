@@ -44,18 +44,49 @@ function ratingPillColor(val: number): string {
   return '#ef4444'
 }
 
-const badgeBase: React.CSSProperties = {
+const badgeBase = {
   borderRadius: '50%',
-  width: 15,
-  height: 15,
+  width: 18,
+  height: 18,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: 8,
-  fontWeight: 800,
   lineHeight: 1,
-  border: '1.5px solid rgba(0,0,0,0.35)',
+  border: '1.5px solid rgba(0,0,0,0.4)',
   flexShrink: 0
+} as const
+
+function SubArrowDown() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 1v7M2 5.5l3 3 3-3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function SubArrowUp() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 9V2M2 4.5l3-3 3 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function BootIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M2 2.5 C2 2.5 2.5 1 4 1 L5.5 1 L6.5 4 L5 5 L7 8 L9.5 8 L9.5 9.5 L4 9.5 C4 9.5 2.5 9.5 2 8.5 L2 2.5Z"
+        fill="white"
+        stroke="none"
+      />
+      <path
+        d="M5.5 1 L7 1 L8 4 L6.5 4"
+        fill="white"
+        stroke="none"
+      />
+    </svg>
+  )
 }
 
 export default function LineupPitch({
@@ -240,18 +271,18 @@ export default function LineupPitch({
                               <div
                                 style={{
                                   ...badgeBase,
-                                  background: subbedOff ? '#E8002D' : '#00A550',
-                                  color: 'white'
+                                  background: subbedOff ? '#E8002D' : '#00A550'
                                 }}
                               >
-                                {subbedOff ? '↓' : '↑'}
+                                {subbedOff ? <SubArrowDown /> : <SubArrowUp />}
                               </div>
                             )}
                             {gc > 0 && (
                               <div
                                 style={{
                                   ...badgeBase,
-                                  background: 'rgba(255,255,255,0.92)'
+                                  background: 'rgba(255,255,255,0.92)',
+                                  fontSize: 10
                                 }}
                               >
                                 ⚽
@@ -261,7 +292,8 @@ export default function LineupPitch({
                               <div
                                 style={{
                                   ...badgeBase,
-                                  background: '#E8002D'
+                                  background: '#E8002D',
+                                  fontSize: 10
                                 }}
                               >
                                 ⚽
@@ -271,11 +303,10 @@ export default function LineupPitch({
                               <div
                                 style={{
                                   ...badgeBase,
-                                  background: '#0033A0',
-                                  color: 'white'
+                                  background: '#0033A0'
                                 }}
                               >
-                                A
+                                <BootIcon />
                               </div>
                             )}
                           </div>

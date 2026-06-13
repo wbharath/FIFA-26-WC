@@ -1049,31 +1049,70 @@ export default function MatchPage() {
                 </div>
               </div>
 
-              {/* Substitution row with replacement player photo */}
+              {/* Substitution row with replacement player photo + rating */}
               {selectedPlayer.subOff && (
-                <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-black/25 border border-wc-border/50">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-wc-red text-[10px] font-bold uppercase tracking-widest">
-                      Substituted Off
-                    </p>
-                    <p className="text-white text-sm mt-0.5">
-                      {selectedPlayer.subOff.player.name}{' '}
-                      <span className="text-wc-muted">
-                        {selectedPlayer.subOff.time.elapsed}&apos;
-                      </span>
-                    </p>
+                <div className="mt-3 p-3 rounded-lg bg-black/25 border border-wc-border/50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-wc-red text-[10px] font-bold uppercase tracking-widest">
+                        Substituted Off
+                      </p>
+                      <p className="text-white text-sm mt-0.5">
+                        {selectedPlayer.subOff.player.name}{' '}
+                        <span className="text-wc-muted">
+                          {selectedPlayer.subOff.time.elapsed}&apos;
+                        </span>
+                      </p>
+                    </div>
+                    <img
+                      src={resolvePhoto(
+                        selectedPlayer.subOff.player.id,
+                        activeTeam
+                      )}
+                      className="w-12 h-12 rounded-full object-cover bg-wc-border shrink-0"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).src =
+                          `https://media.api-sports.io/football/players/${selectedPlayer.subOff.player.id}.png`
+                      }}
+                    />
                   </div>
-                  <img
-                    src={resolvePhoto(
-                      selectedPlayer.subOff.player.id,
-                      activeTeam
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-wc-border/40">
+                    <p className="text-wc-muted text-xs flex-1 truncate">
+                      Rate {selectedPlayer.subOff.player.name.split(' ').slice(-1)[0]}
+                    </p>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={ratings[selectedPlayer.subOff.player.id] || ''}
+                      onChange={(e) => {
+                        const val = Number(e.target.value)
+                        if (val >= 1 && val <= 10) {
+                          ratePlayer(
+                            {
+                              id: selectedPlayer.subOff.player.id,
+                              name: selectedPlayer.subOff.player.name
+                            },
+                            activeTeamId,
+                            val,
+                            user
+                          )
+                        }
+                      }}
+                      className="w-14 bg-wc-border/30 border border-wc-border text-center text-sm text-white focus:border-wc-green focus:outline-none transition-colors"
+                      placeholder="1-10"
+                    />
+                    {ratings[selectedPlayer.subOff.player.id] && (
+                      <button
+                        onClick={() =>
+                          clearRating(selectedPlayer.subOff.player.id, user)
+                        }
+                        className="text-wc-muted hover:text-wc-red transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
-                    className="w-12 h-12 rounded-full object-cover bg-wc-border shrink-0"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).src =
-                        `https://media.api-sports.io/football/players/${selectedPlayer.subOff.player.id}.png`
-                    }}
-                  />
+                  </div>
                 </div>
               )}
               {selectedPlayer.subOn && (
