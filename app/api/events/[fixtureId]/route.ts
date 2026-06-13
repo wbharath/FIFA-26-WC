@@ -9,15 +9,15 @@ export async function GET(
     `https://v3.football.api-sports.io/fixtures/events?fixture=${fixtureId}`,
     {
       headers: { 'x-apisports-key': process.env.APIFOOTBALL_KEY! },
-      next: { revalidate: 60 }
+      cache: 'no-store'
     }
   )
   const data = await res.json()
   const response = data.response as any[]
 
-  if (!response) {
+  if (!response || response.length === 0) {
     return NextResponse.json([], {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' }
+      headers: { 'Cache-Control': 'no-store' }
     })
   }
 
@@ -33,6 +33,6 @@ export async function GET(
     }))
 
   return NextResponse.json(events, {
-    headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' }
+    headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=60' }
   })
 }

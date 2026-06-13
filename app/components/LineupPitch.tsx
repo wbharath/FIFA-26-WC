@@ -74,17 +74,15 @@ function SubArrowUp() {
 
 function BootIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M2 2.5 C2 2.5 2.5 1 4 1 L5.5 1 L6.5 4 L5 5 L7 8 L9.5 8 L9.5 9.5 L4 9.5 C4 9.5 2.5 9.5 2 8.5 L2 2.5Z"
-        fill="white"
-        stroke="none"
-      />
-      <path
-        d="M5.5 1 L7 1 L8 4 L6.5 4"
-        fill="white"
-        stroke="none"
-      />
+    <svg width="11" height="10" viewBox="0 0 22 20" fill="white" xmlns="http://www.w3.org/2000/svg">
+      {/* Boot upper (leg) */}
+      <rect x="3" y="1" width="5" height="10" rx="1.5"/>
+      {/* Boot foot extending right */}
+      <path d="M3 9 L3 13 C3 15 5 16 7 16 L19 16 L19 14 L8 14 C6.5 14 5.5 13 5.5 11.5 L5.5 9 Z"/>
+      {/* Studs */}
+      <rect x="7.5" y="16" width="2" height="2.5" rx="0.8"/>
+      <rect x="12" y="16" width="2" height="2.5" rx="0.8"/>
+      <rect x="16.5" y="16" width="2" height="2.5" rx="0.8"/>
     </svg>
   )
 }

@@ -854,16 +854,7 @@ export default function MatchPage() {
                       return (
                         <div
                           key={s.player.id}
-                          className="flex items-center gap-3 px-3 py-2.5 border-b border-wc-border/50 hover:bg-wc-surface-2 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedPlayer({
-                              ...s.player,
-                              photo,
-                              subOn: subOnEvent || null,
-                              subOff: null
-                            })
-                            setShowPlayerModal(true)
-                          }}
+                          className="flex items-center gap-3 px-3 py-2.5 border-b border-wc-border/50"
                         >
                           <span className="text-wc-dimmed text-xs font-bold w-5 text-center shrink-0">
                             {s.player.number ?? '—'}
@@ -886,9 +877,41 @@ export default function MatchPage() {
                             </p>
                           </div>
                           {subOnEvent && (
-                            <span className="text-wc-green text-xs font-bold shrink-0">
-                              ↕ {subOnEvent.time.elapsed}&apos;
+                            <span className="text-wc-green text-xs font-semibold shrink-0">
+                              ↑ {subOnEvent.time.elapsed}&apos;
                             </span>
+                          )}
+                          {isStarted && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={ratings[s.player.id] || ''}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value)
+                                  if (val >= 1 && val <= 10)
+                                    ratePlayer(
+                                      { id: s.player.id, name: s.player.name },
+                                      activeTeamId,
+                                      val,
+                                      user
+                                    )
+                                }}
+                                className="w-12 bg-wc-border/30 border border-wc-border text-center text-sm text-white focus:border-wc-green focus:outline-none transition-colors"
+                                placeholder="—"
+                              />
+                              {ratings[s.player.id] && (
+                                <button
+                                  onClick={() =>
+                                    clearRating(s.player.id, user)
+                                  }
+                                  className="text-wc-muted hover:text-wc-red transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       )
